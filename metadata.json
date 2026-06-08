@@ -1,0 +1,10 @@
+{
+  "name": "影音智能整理與翻譯大師",
+  "description": "一鍵將影音/音訊、麥克風錄音、或逐字稿，進行AI智能重點整理、生成時間軸與階層心智大綱，並可無縫翻譯對照英文、日文、韓文與繁體中文。",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
