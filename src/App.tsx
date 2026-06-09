@@ -29,8 +29,8 @@ import {
 } from "lucide-react";
 
 // 動態流暢 Loading 提示文案
-const LOADING_TIPS = [
-  "正在啟動 Gemini 3.5 Flash 智能多模態分析引擎...",
+const LOADING_TIPS_GEMINI = [
+  "正在啟動 Gemini 2.5 Flash Lite 智能多模態分析引擎...",
   "正在安全解構影音媒體資訊，辨識音訊特質...",
   "正在由 AI 深入理解與聆聽影音，進行極致逐字轉錄與提煉...",
   "AI 正在針對內容主旨、宗旨脈絡進行頂層概要摘要 (summary) 歸納...",
@@ -40,6 +40,18 @@ const LOADING_TIPS = [
   "正在撰寫具有落地可行性、實操目標明確的下一步行動方案指南...",
   "正在生成語意最貼切的核心關鍵字標籤，即將完整渲染呈現..."
 ];
+const LOADING_TIPS_NVIDIA = [
+  "正在啟動 NVIDIA Nemotron-3 Nano Omni 30B (Reasoning) 推理引擎...",
+  "正在將文字內容送入 NVIDIA NIM 雲端加速推理...",
+  "AI 正在深度解析文字脈絡，進行超高精度語意理解...",
+  "正在歸納內容主旨與核心概要摘要 (summary)...",
+  "正在編製時間軸項目與階層式心智大綱 (mindmap)...",
+  "正在萃取金句與核心論點 (insights)...",
+  "正在撰寫行動方案指南與關鍵字標籤，即將完成..."
+];
+
+// NVIDIA 不支援的輸入模式
+const NVIDIA_UNSUPPORTED_INPUTS = ["file", "link", "recording"];
 
 export default function App() {
   // 核心狀態
@@ -68,6 +80,9 @@ export default function App() {
   const [isTranslating, setIsTranslating] = useState(false);
   const [activeLang, setActiveLang] = useState<SupportedLanguage>("original");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // AI 服務提供商
+  const [provider, setProvider] = useState<"gemini" | "nvidia">("gemini");
 
   // 聊天狀態 (聊天紀錄會關聯到 activeItem，但在此以 state 做渲染)
   const [chatHistory, setChatHistory] = useState<QAPair[]>([]);
@@ -120,7 +135,8 @@ export default function App() {
     if (isProcessing) {
       setLoadingTipIndex(0);
       interval = setInterval(() => {
-        setLoadingTipIndex((prev) => (prev + 1) % LOADING_TIPS.length);
+        const tips = provider === "nvidia" ? LOADING_TIPS_NVIDIA : LOADING_TIPS_GEMINI;
+        setLoadingTipIndex((prev) => (prev + 1) % tips.length);
       }, 3500);
     }
     return () => {
@@ -226,7 +242,11 @@ export default function App() {
         throw new Error("不支援的整理方式");
       }
 
-      const response = await fetch("/api/summarize", {
+      // 加入 AI 提供商及操作行為
+      payload.provider = provider;
+      payload.action = "summarize";
+
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -234,7 +254,7 @@ export default function App() {
 
       const data = await response.json();
       if (!response.ok || data.error) {
-        throw new Error(data.error || "Gemini 分析影音失敗，請稍候重試");
+        throw new Error(data.error || "AI 分析影音失敗，請稍候重試");
       }
 
       // 生成歷史紀錄
@@ -278,10 +298,12 @@ export default function App() {
     try {
       const defaultName = `現場錄音_${new Date().toLocaleDateString()}_${new Date().toLocaleTimeString()}`;
       
-      const response = await fetch("/api/summarize", {
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          provider: provider,
+          action: "summarize",
           type: "media",
           fileBase64: base64Data,
           mimeType: mimeType,
@@ -291,7 +313,7 @@ export default function App() {
 
       const data = await response.json();
       if (!response.ok || data.error) {
-        throw new Error(data.error || "Gemini 分析錄音重點失敗，請重試");
+        throw new Error(data.error || "AI 分析錄音重點失敗，請重試");
       }
 
       const newHistoryItem: HistoryItem = {
@@ -340,10 +362,12 @@ export default function App() {
     // 發起 API 翻譯
     setIsTranslating(true);
     try {
-      const response = await fetch("/api/translate", {
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          provider: provider,
+          action: "translate",
           summaryData: activeItem.summaries.original,
           targetLanguage: targetLang
         })
@@ -396,10 +420,12 @@ export default function App() {
         ? activeItem.originalInput
         : JSON.stringify(activeItem.summaries.original);
 
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          provider: provider,
+          action: "chat",
           transcript: bgContext,
           chatHistory: historyForBackend,
           userMessage: userMessage
@@ -508,7 +534,7 @@ export default function App() {
           )}
 
           <div className="text-gray-500 text-xs font-mono hidden sm:inline-block">
-            Gemini 3.5 Flash
+            {provider === "gemini" ? "Gemini 2.5 Flash Lite" : "NVIDIA Nemotron-3 Nano Omni 30B"}
           </div>
         </div>
       </header>
@@ -563,10 +589,13 @@ export default function App() {
                   多模態精密解析中
                 </span>
                 <h2 className="text-base md:text-lg font-bold text-white transition-all">
-                  {LOADING_TIPS[loadingTipIndex]}
+                  {(provider === "nvidia" ? LOADING_TIPS_NVIDIA : LOADING_TIPS_GEMINI)[loadingTipIndex] || (provider === "nvidia" ? LOADING_TIPS_NVIDIA : LOADING_TIPS_GEMINI)[0]}
                 </h2>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  影音處理非常依賴深度的時空轉換及音軌剖析，Gemini AI 大模型現在正在竭力將整部影音整理為高精密度的 JSON 繁中結構資料。這通常需要一點時間，請您稍加等候，奇蹟即將顯現。
+                  {provider === "nvidia"
+                    ? "NVIDIA Nemotron-3 Nano Omni 30B (Reasoning) 正在透過 NIM 雲端推理加速基礎設施，深度解析您的文字內容。這通常需要一點時間，請您稍加等候。"
+                    : "影音處理非常依賴深度的時空轉換及音軌剖析，Gemini AI 大模型現在正在竭力將整部影音整理為高精密度的 JSON 繁中結構資料。這通常需要一點時間，請您稍加等候，奇蹟即將顯現。"
+                  }
                 </p>
                 
                 {/* 進度裝飾線 */}
@@ -620,7 +649,12 @@ export default function App() {
                   <button
                     key={inputM.id}
                     onClick={() => {
-                      setInputType(inputM.id as any);
+                      const newInputType = inputM.id as any;
+                      // 若切換至 NVIDIA 不支援的輸入模式，自動回切為 Gemini
+                      if (provider === "nvidia" && NVIDIA_UNSUPPORTED_INPUTS.includes(newInputType)) {
+                        setProvider("gemini");
+                      }
+                      setInputType(newInputType);
                       setErrorMsg(null);
                     }}
                     className={`flex-1 py-3 px-2 rounded-xl text-xs md:text-sm font-semibold flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
@@ -636,6 +670,67 @@ export default function App() {
                   </button>
                 ))}
               </div>
+
+              {/* AI 服務提供商選擇器 */}
+              <div className="bg-[#18181b] p-4 rounded-2xl border border-[#27272a] shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-xs font-bold text-white">AI 服務提供商</h3>
+                    <p className="text-[10px] text-gray-400">選擇處理整理與分析的 AI 引擎</p>
+                  </div>
+                </div>
+                
+                <div className="flex bg-[#09090b] p-1 rounded-xl border border-[#27272a] w-full sm:w-auto">
+                  <button
+                    onClick={() => {
+                      setProvider("gemini");
+                      setErrorMsg(null);
+                    }}
+                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                      provider === "gemini"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <span>Google Gemini</span>
+                    <span className="text-[9px] opacity-75 font-mono">(gemini-2.5-flash-lite)</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setProvider("nvidia");
+                      setErrorMsg(null);
+                      // 若目前輸入模式為 NVIDIA 不支援的類型，自動切至「貼上字稿」
+                      if (NVIDIA_UNSUPPORTED_INPUTS.includes(inputType)) {
+                        setInputType("transcript");
+                      }
+                    }}
+                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                      provider === "nvidia"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    <span>NVIDIA NIM</span>
+                    <span className="text-[9px] opacity-75 font-mono">(nemotron-3-nano-omni-30b-a3b-reasoning)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* NVIDIA 模式提示橫幅 */}
+              {provider === "nvidia" && (
+                <div className="p-3.5 bg-amber-500/5 border border-amber-500/20 text-amber-200 rounded-2xl text-xs flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                  <div>
+                    <h4 className="font-bold text-amber-300">NVIDIA NIM 模式提示</h4>
+                    <p className="mt-0.5 leading-relaxed text-amber-200/80">
+                      Nemotron-3 Nano Omni 30B (Reasoning) 為純文字推理模型，僅支援「✍️ 貼上字稿」輸入方式。若需處理影音檔案、連結或麥克風錄音，請切換回 Google Gemini 引擎。
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* 報錯提示橫幅 */}
               {errorMsg && (
