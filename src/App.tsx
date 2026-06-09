@@ -29,8 +29,8 @@ import {
 } from "lucide-react";
 
 // 動態流暢 Loading 提示文案
-const LOADING_TIPS_GEMINI = [
-  "正在啟動 Gemini 2.5 Flash Lite 智能多模態分析引擎...",
+const LOADING_TIPS = [
+  "正在啟動 Gemini 3.5 Flash 智能多模態分析引擎...",
   "正在安全解構影音媒體資訊，辨識音訊特質...",
   "正在由 AI 深入理解與聆聽影音，進行極致逐字轉錄與提煉...",
   "AI 正在針對內容主旨、宗旨脈絡進行頂層概要摘要 (summary) 歸納...",
@@ -40,18 +40,6 @@ const LOADING_TIPS_GEMINI = [
   "正在撰寫具有落地可行性、實操目標明確的下一步行動方案指南...",
   "正在生成語意最貼切的核心關鍵字標籤，即將完整渲染呈現..."
 ];
-const LOADING_TIPS_NVIDIA = [
-  "正在啟動 NVIDIA Nemotron-3 Nano Omni 30B (Reasoning) 推理引擎...",
-  "正在將文字內容送入 NVIDIA NIM 雲端加速推理...",
-  "AI 正在深度解析文字脈絡，進行超高精度語意理解...",
-  "正在歸納內容主旨與核心概要摘要 (summary)...",
-  "正在編製時間軸項目與階層式心智大綱 (mindmap)...",
-  "正在萃取金句與核心論點 (insights)...",
-  "正在撰寫行動方案指南與關鍵字標籤，即將完成..."
-];
-
-// NVIDIA 不支援的輸入模式
-const NVIDIA_UNSUPPORTED_INPUTS = ["file", "link", "recording"];
 
 export default function App() {
   // 核心狀態
@@ -81,15 +69,29 @@ export default function App() {
   const [activeLang, setActiveLang] = useState<SupportedLanguage>("original");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // AI 服務提供商
-  const [provider, setProvider] = useState<"gemini" | "nvidia">("gemini");
-
   // 聊天狀態 (聊天紀錄會關聯到 activeItem，但在此以 state 做渲染)
   const [chatHistory, setChatHistory] = useState<QAPair[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
 
   // 行動端側邊欄控制
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // 全域 Toast 狀態
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
+  // Toast 自動消失定時器
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
+    setToast({ message, type });
+  };
 
   // 同步從 LocalStorage 讀取歷史紀錄
   useEffect(() => {
@@ -98,9 +100,10 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved) as HistoryItem[];
         setHistory(parsed);
-        if (parsed.length > 0) {
-          setActiveId(parsed[0].id);
-        }
+        // 移除自動強行選取第一筆歷史筆記的操作，確保剛載入時畫面純淨且不容易讀取壞損歷史時卡死
+        // if (parsed.length > 0) {
+        //   setActiveId(parsed[0].id);
+        // }
       } catch (e) {
         console.error("無法載入歷史紀錄：", e);
       }
@@ -135,8 +138,7 @@ export default function App() {
     if (isProcessing) {
       setLoadingTipIndex(0);
       interval = setInterval(() => {
-        const tips = provider === "nvidia" ? LOADING_TIPS_NVIDIA : LOADING_TIPS_GEMINI;
-        setLoadingTipIndex((prev) => (prev + 1) % tips.length);
+        setLoadingTipIndex((prev) => (prev + 1) % LOADING_TIPS.length);
       }, 3500);
     }
     return () => {
@@ -242,11 +244,7 @@ export default function App() {
         throw new Error("不支援的整理方式");
       }
 
-      // 加入 AI 提供商及操作行為
-      payload.provider = provider;
-      payload.action = "summarize";
-
-      const response = await fetch("/api/generate", {
+      const response = await fetch("/api/summarize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -254,10 +252,7 @@ export default function App() {
 
       const data = await response.json();
       if (!response.ok || data.error) {
-        const errorMessage = typeof data.error === 'string'
-          ? data.error
-          : (data.error?.message || JSON.stringify(data.error) || "AI 分析影音失敗，請稍候重試");
-        throw new Error(errorMessage);
+        throw new Error(data.error || "Gemini 分析影音失敗，請稍候重試");
       }
 
       // 生成歷史紀錄
@@ -301,12 +296,10 @@ export default function App() {
     try {
       const defaultName = `現場錄音_${new Date().toLocaleDateString()}_${new Date().toLocaleTimeString()}`;
       
-      const response = await fetch("/api/generate", {
+      const response = await fetch("/api/summarize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          provider: provider,
-          action: "summarize",
           type: "media",
           fileBase64: base64Data,
           mimeType: mimeType,
@@ -316,10 +309,7 @@ export default function App() {
 
       const data = await response.json();
       if (!response.ok || data.error) {
-        const errorMessage = typeof data.error === 'string'
-          ? data.error
-          : (data.error?.message || JSON.stringify(data.error) || "AI 分析錄音重點失敗，請重試");
-        throw new Error(errorMessage);
+        throw new Error(data.error || "Gemini 分析錄音重點失敗，請重試");
       }
 
       const newHistoryItem: HistoryItem = {
@@ -368,12 +358,10 @@ export default function App() {
     // 發起 API 翻譯
     setIsTranslating(true);
     try {
-      const response = await fetch("/api/generate", {
+      const response = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          provider: provider,
-          action: "translate",
           summaryData: activeItem.summaries.original,
           targetLanguage: targetLang
         })
@@ -381,10 +369,7 @@ export default function App() {
 
       const data = await response.json();
       if (!response.ok || data.error) {
-        const errorMessage = typeof data.error === 'string'
-          ? data.error
-          : (data.error?.message || JSON.stringify(data.error) || "翻譯整理資料失敗");
-        throw new Error(errorMessage);
+        throw new Error(data.error || "翻譯整理資料失敗");
       }
 
       // 更新歷史紀錄中的多語系快取
@@ -406,7 +391,7 @@ export default function App() {
 
     } catch (e: any) {
       console.error(e);
-      alert(e.message || "翻譯發生錯誤，請確認網路與密鑰設定");
+      showToast(e.message || "翻譯發生錯誤，請確認網路與環境設定", "error");
     } finally {
       setIsTranslating(false);
     }
@@ -429,12 +414,10 @@ export default function App() {
         ? activeItem.originalInput
         : JSON.stringify(activeItem.summaries.original);
 
-      const response = await fetch("/api/generate", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          provider: provider,
-          action: "chat",
           transcript: bgContext,
           chatHistory: historyForBackend,
           userMessage: userMessage
@@ -443,10 +426,7 @@ export default function App() {
 
       const data = await response.json();
       if (!response.ok || data.error) {
-        const errorMessage = typeof data.error === 'string'
-          ? data.error
-          : (data.error?.message || JSON.stringify(data.error) || "發送訊息失敗");
-        throw new Error(errorMessage);
+        throw new Error(data.error || "發送訊息失敗");
       }
 
       const newQAPair: QAPair = {
@@ -472,7 +452,7 @@ export default function App() {
 
     } catch (e: any) {
       console.error(e);
-      alert(e.message || "發生問答錯誤");
+      showToast(e.message || "發生問答錯誤", "error");
     } finally {
       setIsChatLoading(false);
     }
@@ -482,7 +462,7 @@ export default function App() {
     const updated = history.filter(item => item.id !== id);
     saveHistoryToStorage(updated);
     if (activeId === id) {
-      setActiveId(updated.length > 0 ? updated[0].id : null);
+      setActiveId(null); // 當前筆記被刪除後，直接回到乾淨的全新影音上傳主頁面，防止引發自動顯示別筆可能受損的歷史記錄而死當
     }
   };
 
@@ -514,9 +494,16 @@ export default function App() {
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="md:hidden p-2 rounded-xl bg-[#09090b] border border-[#27272a] hover:bg-[#27272a]/50 text-gray-400 cursor-pointer"
+            className="p-2 rounded-xl bg-[#09090b] border border-[#27272a] hover:bg-[#27272a]/50 text-gray-400 cursor-pointer flex items-center gap-2 relative group transition-all"
+            title="開啟/收合歷史整理大庫"
           >
-            {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {isSidebarOpen ? <X className="w-4 h-4 text-red-400" /> : <Menu className="w-4 h-4 text-blue-400" />}
+            <span className="text-[11px] font-bold tracking-wider text-gray-300 group-hover:text-white hidden sm:inline-block">歷史大庫</span>
+            {history.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[9.5px] w-4.5 h-4.5 rounded-full flex items-center justify-center font-extrabold shadow-md border border-[#18181b]">
+                {history.length}
+              </span>
+            )}
           </button>
 
           <div className="flex items-center gap-3">
@@ -546,7 +533,7 @@ export default function App() {
           )}
 
           <div className="text-gray-500 text-xs font-mono hidden sm:inline-block">
-            {provider === "gemini" ? "Gemini 2.5 Flash Lite" : "NVIDIA Nemotron-3 Nano Omni 30B"}
+            Gemini 3.5 Flash
           </div>
         </div>
       </header>
@@ -554,25 +541,29 @@ export default function App() {
       {/* 主體雙欄面板佈局 */}
       <div className="flex-1 flex overflow-hidden relative">
         
-        {/* 手機板 Sidebar 蓋板 (Overlay) */}
+        {/* 手機板滑出式 Sidebar 蓋板 (Overlay) - 大螢幕 (md) 無須蓋板以利一邊查看一邊操作 */}
         {isSidebarOpen && (
           <div 
             onClick={() => setIsSidebarOpen(false)}
-            className="md:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-xs"
+            className="md:hidden fixed inset-0 bg-black/75 z-30 backdrop-blur-xs transition-opacity duration-350"
           />
         )}
 
-        {/* 左側欄 (Sidebar) */}
+        {/* 左側欄 (Sidebar) - 完美響應式：大螢幕時為並排滑出，小螢幕時為 fixed 懸浮抽屜 */}
         <aside className={`
-          absolute md:relative top-0 bottom-0 left-0 z-40 w-80 shrink-0 h-full transition-transform duration-300 transform
-          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          fixed inset-y-0 left-0 md:relative md:inset-auto h-full bg-[#0c0c0e] shrink-0
+          transition-all duration-300 ease-out z-40 md:z-30
+          ${isSidebarOpen 
+            ? "w-80 translate-x-0 border-r border-[#27272a] shadow-2xl md:shadow-none" 
+            : "w-80 md:w-0 -translate-x-full md:translate-x-0 md:overflow-hidden md:border-r-0"
+          }
         `}>
           <Sidebar 
             history={history}
             activeId={activeId}
             onSelect={(id) => {
               setActiveId(id);
-              setIsSidebarOpen(false); // 點選項目後關閉手機側欄
+              setIsSidebarOpen(false); // 點選項目後自動收起側欄
             }}
             onDelete={handleDeleteHistory}
             onClearAll={handleClearAllHistory}
@@ -601,13 +592,10 @@ export default function App() {
                   多模態精密解析中
                 </span>
                 <h2 className="text-base md:text-lg font-bold text-white transition-all">
-                  {(provider === "nvidia" ? LOADING_TIPS_NVIDIA : LOADING_TIPS_GEMINI)[loadingTipIndex] || (provider === "nvidia" ? LOADING_TIPS_NVIDIA : LOADING_TIPS_GEMINI)[0]}
+                  {LOADING_TIPS[loadingTipIndex]}
                 </h2>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  {provider === "nvidia"
-                    ? "NVIDIA Nemotron-3 Nano Omni 30B (Reasoning) 正在透過 NIM 雲端推理加速基礎設施，深度解析您的文字內容。這通常需要一點時間，請您稍加等候。"
-                    : "影音處理非常依賴深度的時空轉換及音軌剖析，Gemini AI 大模型現在正在竭力將整部影音整理為高精密度的 JSON 繁中結構資料。這通常需要一點時間，請您稍加等候，奇蹟即將顯現。"
-                  }
+                  影音處理非常依賴深度的時空轉換及音軌剖析，Gemini AI 大模型現在正在竭力將整部影音整理為高精密度的 JSON 繁中結構資料。這通常需要一點時間，請您稍加等候，奇蹟即將顯現。
                 </p>
                 
                 {/* 進度裝飾線 */}
@@ -661,12 +649,7 @@ export default function App() {
                   <button
                     key={inputM.id}
                     onClick={() => {
-                      const newInputType = inputM.id as any;
-                      // 若切換至 NVIDIA 不支援的輸入模式，自動回切為 Gemini
-                      if (provider === "nvidia" && NVIDIA_UNSUPPORTED_INPUTS.includes(newInputType)) {
-                        setProvider("gemini");
-                      }
-                      setInputType(newInputType);
+                      setInputType(inputM.id as any);
                       setErrorMsg(null);
                     }}
                     className={`flex-1 py-3 px-2 rounded-xl text-xs md:text-sm font-semibold flex flex-col items-center justify-center gap-1 cursor-pointer transition-all ${
@@ -682,67 +665,6 @@ export default function App() {
                   </button>
                 ))}
               </div>
-
-              {/* AI 服務提供商選擇器 */}
-              <div className="bg-[#18181b] p-4 rounded-2xl border border-[#27272a] shadow-xl flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-xs font-bold text-white">AI 服務提供商</h3>
-                    <p className="text-[10px] text-gray-400">選擇處理整理與分析的 AI 引擎</p>
-                  </div>
-                </div>
-                
-                <div className="flex bg-[#09090b] p-1 rounded-xl border border-[#27272a] w-full sm:w-auto">
-                  <button
-                    onClick={() => {
-                      setProvider("gemini");
-                      setErrorMsg(null);
-                    }}
-                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-all ${
-                      provider === "gemini"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    <span>Google Gemini</span>
-                    <span className="text-[9px] opacity-75 font-mono">(gemini-2.5-flash-lite)</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setProvider("nvidia");
-                      setErrorMsg(null);
-                      // 若目前輸入模式為 NVIDIA 不支援的類型，自動切至「貼上字稿」
-                      if (NVIDIA_UNSUPPORTED_INPUTS.includes(inputType)) {
-                        setInputType("transcript");
-                      }
-                    }}
-                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 cursor-pointer transition-all ${
-                      provider === "nvidia"
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    <span>NVIDIA NIM</span>
-                    <span className="text-[9px] opacity-75 font-mono">(nemotron-3-nano-omni-30b-a3b-reasoning)</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* NVIDIA 模式提示橫幅 */}
-              {provider === "nvidia" && (
-                <div className="p-3.5 bg-amber-500/5 border border-amber-500/20 text-amber-200 rounded-2xl text-xs flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-                  <div>
-                    <h4 className="font-bold text-amber-300">NVIDIA NIM 模式提示</h4>
-                    <p className="mt-0.5 leading-relaxed text-amber-200/80">
-                      Nemotron-3 Nano Omni 30B (Reasoning) 為純文字推理模型，僅支援「✍️ 貼上字稿」輸入方式。若需處理影音檔案、連結或麥克風錄音，請切換回 Google Gemini 引擎。
-                    </p>
-                  </div>
-                </div>
-              )}
 
               {/* 報錯提示橫幅 */}
               {errorMsg && (
@@ -914,6 +836,31 @@ export default function App() {
         </main>
 
       </div>
+
+      {/* 繁中科技極簡 Toast 提示框 */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className={`flex items-center gap-2.5 px-4.5 py-3 rounded-2xl border shadow-xl backdrop-blur-md max-w-sm border-[#27272a] ${
+            toast.type === "error" 
+              ? "bg-red-950/90 border-red-500/30 text-red-200" 
+              : toast.type === "success"
+                ? "bg-emerald-950/90 border-emerald-500/30 text-emerald-200"
+                : "bg-[#18181b]/95 text-blue-200"
+          }`}>
+            <AlertCircle className={`w-4 h-4 shrink-0 ${
+              toast.type === "error" ? "text-red-400" : toast.type === "success" ? "text-emerald-400" : "text-blue-400"
+            }`} />
+            <p className="text-xs font-semibold leading-relaxed font-sans">{toast.message}</p>
+            <button 
+              onClick={() => setToast(null)}
+              className="ml-1 opacity-60 hover:opacity-100 transition-opacity text-white text-xs cursor-pointer select-none"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

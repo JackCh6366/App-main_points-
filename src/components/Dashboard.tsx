@@ -63,23 +63,14 @@ export function Dashboard({
   // 取得當前語言下之重點整理數據
   const currentSummary: VideoSummaryJSON = activeItem.summaries[activeLang] || activeItem.summaries.original;
 
-  // Safe fallbacks to prevent crashes in case of malformed AI responses
-  const title = currentSummary?.title || "未命名影音重點";
-  const summary = currentSummary?.summary || "暫無摘要內容";
-  const timeline = Array.isArray(currentSummary?.timeline) ? currentSummary.timeline : [];
-  const insights = Array.isArray(currentSummary?.insights) ? currentSummary.insights : [];
-  const keywords = Array.isArray(currentSummary?.keywords) ? currentSummary.keywords : [];
-  const mindmap = Array.isArray(currentSummary?.mindmap) ? currentSummary.mindmap : [];
-  const actionItems = Array.isArray(currentSummary?.actionItems) ? currentSummary.actionItems : [];
-
   // 自動拉到最新聊天訊息底端
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [qaHistory, isChatLoading]);
 
   // 控制點擊 Time 標記，自動將該標記與標題複製、並直接問 AI：
-  const handleTimeClick = (time: string, titleStr: string) => {
-    const question = `我想了解在 ${time} 的章節段落「${titleStr}」，這部分影片裡主要教了什麼、細節為何？可以詳細擴展嗎？`;
+  const handleTimeClick = (time: string, title: string) => {
+    const question = `我想了解在 ${time} 的章節段落「${title}」，這部分影片裡主要教了什麼、細節為何？可以詳細擴展嗎？`;
     onSendChatMessage(question);
     // 開啟聊天室平滑滑動
     const chatElement = document.getElementById("chat-section");
@@ -95,23 +86,23 @@ export function Dashboard({
 
   const copyFullMarkdown = () => {
     const md = `
-# ${title}
+# ${currentSummary.title}
 語言版本: ${activeLang.toUpperCase()}
 
 ## 💡 核心摘要
-${summary}
+${currentSummary.summary}
 
 ## ⏰ 時間軸重點
-${timeline.map(t => `- **[${t.time}] ${t.title}**: ${t.description}`).join("\n")}
+${currentSummary.timeline.map(t => `- **[${t.time}] ${t.title}**: ${t.description}`).join("\n")}
 
 ## 💡 關鍵啟發與觀點
-${insights.map(i => `- **${i.point}**\n  > "${i.quote}"`).join("\n")}
+${currentSummary.insights.map(i => `- **${i.point}**\n  > "${i.quote}"`).join("\n")}
 
 ## 🎯 實操行動指南
-${actionItems.map(a => `- **[任務] ${a.task}** \n  *原因與建議*: ${a.reason}`).join("\n")}
+${currentSummary.actionItems.map(a => `- **[任務] ${a.task}** \n  *原因與建議*: ${a.reason}`).join("\n")}
 
 ## 🏷️ 關鍵字標籤
-${keywords.join(", ")}
+${currentSummary.keywords.join(", ")}
     `.trim();
 
     navigator.clipboard.writeText(md);
@@ -123,7 +114,7 @@ ${keywords.join(", ")}
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentSummary, null, 2));
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `${title}_${activeLang}.json`);
+    downloadAnchor.setAttribute("download", `${currentSummary.title}_${activeLang}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -147,7 +138,7 @@ ${keywords.join(", ")}
               </span>
             </div>
             <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-              {title}
+              {currentSummary.title || "未命名影音重點"}
             </h1>
           </div>
 
@@ -277,7 +268,7 @@ ${keywords.join(", ")}
                         <span>影音摘要</span>
                       </h3>
                       <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
-                        {summary}
+                        {currentSummary.summary || "暫無摘要內容"}
                       </p>
                     </div>
 
@@ -288,7 +279,7 @@ ${keywords.join(", ")}
                         <span>關鍵啟發觀點 (Insights)</span>
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {insights.map((ins, i) => (
+                        {currentSummary.insights.map((ins, i) => (
                           <div 
                             key={i} 
                             style={{ animationDelay: `${i * 0.1}s` }}
@@ -315,7 +306,7 @@ ${keywords.join(", ")}
                     <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800/50 space-y-2">
                       <h4 className="text-xs font-bold text-zinc-500">核心關鍵字標籤：</h4>
                       <div className="flex flex-wrap gap-1.5">
-                        {keywords.map((kw, i) => (
+                        {currentSummary.keywords.map((kw, i) => (
                           <span 
                             key={i} 
                             className="text-xs px-2.5 py-1 rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 font-medium transition-colors"
@@ -331,13 +322,13 @@ ${keywords.join(", ")}
 
                 {activeTab === "timeline" && (
                   <TimelineSummary 
-                    timeline={timeline} 
+                    timeline={currentSummary.timeline} 
                     onTimeClick={handleTimeClick}
                   />
                 )}
 
                 {activeTab === "mindmap" && (
-                  <MindMapOutline nodes={mindmap} />
+                  <MindMapOutline nodes={currentSummary.mindmap} />
                 )}
 
                 {activeTab === "action" && (
@@ -352,7 +343,7 @@ ${keywords.join(", ")}
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 max-h-[500px] overflow-y-auto pr-1">
-                      {actionItems.map((item, i) => (
+                      {currentSummary.actionItems.map((item, i) => (
                         <div 
                           key={i}
                           className="bg-zinc-50/40 dark:bg-zinc-900/10 border border-zinc-100 dark:border-zinc-800/80 p-4 rounded-xl flex items-start gap-3.5 shadow-sm"

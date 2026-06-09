@@ -25,6 +25,8 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
     base64: string;
     mimeType: string;
   } | null>(null);
+  
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // 錄音秒數計時器
   useEffect(() => {
@@ -66,6 +68,7 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
   // 開始錄音
   const startRecording = async () => {
     try {
+      setErrorMsg(null);
       audioChunksRef.current = [];
       setAudioUrl(null);
       setRecordedBlobDetail(null);
@@ -123,7 +126,7 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
       setIsRecording(true);
     } catch (err) {
       console.error("無法存取麥克風設備：", err);
-      alert("存取麥克風失敗，請確定您已允許麥克風權限。");
+      setErrorMsg("存取麥克風設備失敗，請確定您已在瀏覽器設定中允許此網站的麥克風存取權限。");
     }
   };
 
@@ -137,6 +140,7 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
 
   // 清除錄音
   const resetRecorder = () => {
+    setErrorMsg(null);
     setIsRecording(false);
     setAudioUrl(null);
     setRecordedBlobDetail(null);
@@ -226,6 +230,12 @@ export function AudioRecorder({ onRecordingComplete }: AudioRecorderProps) {
                 <Mic className="w-4 h-4 text-red-500 shrink-0" />
                 <span>開啟麥克風並錄音</span>
               </button>
+
+              {errorMsg && (
+                <p className="text-xs text-red-500 font-medium max-w-sm mx-auto bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-xl mt-2 animate-pulse">
+                  ⚠️ {errorMsg}
+                </p>
+              )}
             </div>
           )}
         </div>
