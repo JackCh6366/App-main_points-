@@ -293,56 +293,71 @@ ${transcript}
             return res.status(400).json({ error: "網址連結不能為空" });
           }
           promptText = `
-你是一位專業的多語系影音內容分析大師。
+你是一位專業的多語系影音內容深度分析大師，擅長從各類網路資源中提取核心價值。
 
-任務：使用者提供了一個線上影音/媒體網址連結：【${transcript}】
+【用戶提供的URL】：${transcript}
 
-重要指示：
-1. **優先方式**：使用 Google 搜尋工具搜索該連結，特別是：
-   - 若是 YouTube 連結，搜索該視頻的「官方逐字稿」、「YouTube transcript」、「字幕」或「描述」
-   - 搜索該內容的標題、作者、發布時間、評論摘要等背景信息
-   - 若有相關新聞報導或總結文章，也進行搜索
+【您的任務分階段執行】：
 
-2. **如果搜索無法取得完整內容**：
-   - 基於可取得的信息（標題、描述、摘要、評論等）進行合理的分析
-   - 明確標記「基於標題和可用信息的分析」而非「完整逐字稿分析」
+第一優先級 - 搜索最完整的原始內容：
+1. 若為 YouTube 連結，務必搜索：
+   - YouTube 官方逐字稿 (YouTube transcript/closed captions)
+   - 視頻章節摘要
+   - 視頻評論中的高質量總結
+   - 相關字幕下載資源
+2. 若為其他網媒連結，搜索：
+   - 原文全文內容
+   - 摘要或簡介
+   - 作者評論
+   - 相關討論或評論
 
-3. **生成要求**：
-   - 必須全部以「繁體中文 (Traditional Chinese)」提供
-   - 時間軸摘要應精確標記（格式：MM:SS），若無法確定秒數，可用合理估算
-   - 摘要 150-250 字，簡潔扼要
-   - 心智大綱最多 3 層階層
-   - 金句與觀點應來自實際內容，不要虛構
-   - 行動指南應務實且可執行
-   - 關鍵字 5-8 個，代表影片主題
+第二優先級 - 基礎信息蒐集（若無法獲得完整逐字稿）：
+- 標題、作者、發布日期
+- 官方描述或簡介
+- 重要評論或摘要
+- 相關主題或分類
 
-4. **JSON 格式**（務必完全符合，不輸出額外文字）：
+第三優先級 - 分析與結構化：
+1. 基於搜索結果生成分析
+2. **重要**：若搜索只取得部分信息（如無完整逐字稿），必須在摘要開頭註明：
+   「⚠️ 本分析基於可取得的標題、描述、評論等信息，未獲得完整逐字稿」
+3. 避免虛構、猜測或編造未出現在搜索結果中的內容
+
+【輸出要求 - 繁體中文】：
+- 摘要：150-250 字，精確反映內容核心
+- 時間軸：若有明確時間戳，精確標記（MM:SS）；若無，可省略或估算
+- 心智圖：3 層最多，id 格式：m1, m1-1, m1-1-1
+- 金句：必須直接引用或改述自搜索結果，不要編造
+- 行動項：基於內容邏輯推導，保證可行性
+- 關鍵字：5-8 個，體現主題
+
+【輸出格式 - 純 JSON】（不加任何 markdown、說明或額外文字）：
 {
-  "title": "主題標題",
-  "summary": "150-250字的繁體中文概要說明",
+  "title": "根據搜索結果的準確標題",
+  "summary": "基於可取得信息的 150-250 字繁體中文摘要",
   "timeline": [
-    { "time": "00:00", "title": "段落大綱", "description": "該段落主要談論細節、要點概要" }
+    { "time": "00:00", "title": "段落標題", "description": "段落內容概要" }
   ],
   "mindmap": [
     {
       "id": "m1",
-      "label": "一級核心主題",
+      "label": "一級主題",
       "children": [
         {
           "id": "m1-1",
-          "label": "二級核心重點",
+          "label": "二級主題",
           "children": [
-            { "id": "m1-1-1", "label": "三級關鍵細節描述" }
+            { "id": "m1-1-1", "label": "三級細節" }
           ]
         }
       ]
     }
   ],
   "insights": [
-    { "point": "核心觀點", "quote": "對應的金句或原話" }
+    { "point": "核心觀點", "quote": "原文引用或改述" }
   ],
   "actionItems": [
-    { "task": "具體行動任務", "reason": "做此任務的原因、價值與建議" }
+    { "task": "行動任務", "reason": "任務原因與建議" }
   ],
   "keywords": ["關鍵字1", "關鍵字2"]
 }
@@ -600,7 +615,7 @@ ${transcript}
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+            model: "nvidia/llama-3.1-405b-instruct",
             messages: [
               { role: "system", content: systemInstruction },
               { role: "user", content: promptText }
@@ -661,7 +676,7 @@ ${JSON.stringify(summaryData, null, 2)}
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+            model: "nvidia/llama-3.1-405b-instruct",
             messages: [
               { role: "system", content: systemInstruction },
               { role: "user", content: promptText }
@@ -723,7 +738,7 @@ ${JSON.stringify(summaryData, null, 2)}
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+            model: "nvidia/llama-3.1-405b-instruct",
             messages: messages,
             temperature: 0.7
           })
