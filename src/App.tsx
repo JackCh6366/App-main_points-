@@ -254,7 +254,10 @@ export default function App() {
 
       const data = await response.json();
       if (!response.ok || data.error) {
-        throw new Error(data.error || "AI 分析影音失敗，請稍候重試");
+        const errorMessage = typeof data.error === 'string'
+          ? data.error
+          : (data.error?.message || JSON.stringify(data.error) || "AI 分析影音失敗，請稍候重試");
+        throw new Error(errorMessage);
       }
 
       // 生成歷史紀錄
@@ -313,7 +316,10 @@ export default function App() {
 
       const data = await response.json();
       if (!response.ok || data.error) {
-        throw new Error(data.error || "AI 分析錄音重點失敗，請重試");
+        const errorMessage = typeof data.error === 'string'
+          ? data.error
+          : (data.error?.message || JSON.stringify(data.error) || "AI 分析錄音重點失敗，請重試");
+        throw new Error(errorMessage);
       }
 
       const newHistoryItem: HistoryItem = {
@@ -375,7 +381,10 @@ export default function App() {
 
       const data = await response.json();
       if (!response.ok || data.error) {
-        throw new Error(data.error || "翻譯整理資料失敗");
+        const errorMessage = typeof data.error === 'string'
+          ? data.error
+          : (data.error?.message || JSON.stringify(data.error) || "翻譯整理資料失敗");
+        throw new Error(errorMessage);
       }
 
       // 更新歷史紀錄中的多語系快取
@@ -434,7 +443,10 @@ export default function App() {
 
       const data = await response.json();
       if (!response.ok || data.error) {
-        throw new Error(data.error || "發送訊息失敗");
+        const errorMessage = typeof data.error === 'string'
+          ? data.error
+          : (data.error?.message || JSON.stringify(data.error) || "發送訊息失敗");
+        throw new Error(errorMessage);
       }
 
       const newQAPair: QAPair = {
