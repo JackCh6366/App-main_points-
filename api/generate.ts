@@ -389,20 +389,25 @@ ${transcript}
             systemInstruction: "你是一個專業多國語文音訊與影片分析整理機器人。本質上，你擅長聆聽各類影音的多媒體封包與文字，並轉換成最精緻結構化的繁體中文 JSON 分類。",
             temperature: 0.2,
             ...(isLinkType
-              ? { tools: [{ googleSearch: {} }] }
+              ? {
+                  tools: [{ googleSearch: {} }],
+                  responseMimeType: "application/json"
+                }
               : { responseMimeType: "application/json", responseSchema: summaryResponseSchema }
             )
           },
         }));
 
-        // 從 Gemini 回應中提取文字內容（Google Search tool 模式下 .text 可能為空）
+        // 從 Gemini 回應中提取文字內容
         let textResult = response.text;
         if (!textResult) {
           // 嘗試從 candidates 中提取
           const candidates = (response as any).candidates;
           if (candidates && candidates[0]?.content?.parts) {
             const parts = candidates[0].content.parts;
-            const textParts = parts.filter((p: any) => p.text).map((p: any) => p.text);
+            const textParts = parts
+              .filter((p: any) => p.text)
+              .map((p: any) => p.text);
             if (textParts.length > 0) {
               textResult = textParts.join("\n");
             }
@@ -410,8 +415,8 @@ ${transcript}
         }
 
         if (!textResult) {
-          console.error("[Gemini Summarize] 回應結構:", JSON.stringify(response, null, 2).substring(0, 1000));
-          throw new Error("Gemini AI 未能產出有效的回應，請重試或改用其他輸入方式");
+          console.error("[Gemini Summarize] 完整回應結構:", JSON.stringify(response, null, 2).substring(0, 2000));
+          throw new Error("⚠️ Gemini 未能產出有效回應。可能原因：\n1. 網址無法存取或被限制\n2. Google 搜尋無法取得該內容\n\n💡 建議：請改用【✍️ 貼上字稿】功能，手動複製 YouTube 官方逐字稿後貼上，這樣可以確保 100% 準確的分析。");
         }
 
         console.log("[Gemini Summarize] 原始回應前 300 字:", textResult.substring(0, 300));
