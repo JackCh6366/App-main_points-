@@ -431,9 +431,16 @@ ${transcript}
           throw new Error("⚠️ Gemini 未能產出有效回應。可能原因：\n1. 網址無法存取或被限制\n2. Google 搜尋無法取得該內容\n\n💡 建議：請改用【✍️ 貼上字稿】功能，手動複製 YouTube 官方逐字稿後貼上，這樣可以確保 100% 準確的分析。");
         }
 
-        console.log("[Gemini Summarize] 原始回應前 300 字:", textResult.substring(0, 300));
-        const parsedJson = parseJSONResponse(textResult);
-        return res.json(parsedJson);
+        console.log("[Gemini Summarize] 原始回應前 500 字:", textResult.substring(0, 500));
+
+        try {
+          const parsedJson = parseJSONResponse(textResult);
+          return res.json(parsedJson);
+        } catch (parseError: any) {
+          console.error("[Gemini Summarize] JSON 解析失敗:", parseError.message);
+          console.error("[Gemini Summarize] 原始文本 (前 1000 字):", textResult.substring(0, 1000));
+          throw new Error("⚠️ Google 搜尋無法取得有效內容或返回格式不符。\n\n可能原因：\n1. YouTube 連結內容受限\n2. Google 搜尋無法存取該資源\n3. 連結已移除或私密\n\n💡 最佳解決方案：改用【✍️ 貼上字稿】\n→ 複製 YouTube 官方逐字稿\n→ 在應用中貼上\n→ 保證 100% 準確分析");
+        }
       }
 
       // ==========================================
