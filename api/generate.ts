@@ -404,10 +404,7 @@ ${transcript}
             systemInstruction: "你是一個專業多國語文音訊與影片分析整理機器人。本質上，你擅長聆聽各類影音的多媒體封包與文字，並轉換成最精緻結構化的繁體中文 JSON 分類。",
             temperature: 0.2,
             ...(isLinkType
-              ? {
-                  tools: [{ googleSearch: {} }],
-                  responseMimeType: "application/json"
-                }
+              ? { tools: [{ googleSearch: {} }] }
               : { responseMimeType: "application/json", responseSchema: summaryResponseSchema }
             )
           },
