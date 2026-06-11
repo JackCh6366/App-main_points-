@@ -289,19 +289,20 @@ async function getUrlMetadata(url: string): Promise<LinkMetadata> {
   return result;
 }
 
-// 輔助：嘗試從 NVIDIA 回應中解析 JSON 的強健解析器
+// 輔助：嘗試從 NVIDIA 回應中解析 JSON 的強健解析器，支援從 Markdown 標記或包含額外文字的回應中提取 JSON 對象
 function parseJSONResponse(text: string): any {
   let cleaned = text.trim();
-  if (cleaned.startsWith("```json")) {
-    cleaned = cleaned.substring(7);
-  } else if (cleaned.startsWith("```")) {
-    cleaned = cleaned.substring(3);
+  
+  // 尋找第一個 '{' 與最後一個 '}'
+  const startIdx = cleaned.indexOf('{');
+  const endIdx = cleaned.lastIndexOf('}');
+  
+  if (startIdx === -1 || endIdx === -1 || startIdx > endIdx) {
+    throw new Error("模型回傳的內容無法解析為有效的 JSON 結構:\n" + (text.length > 200 ? text.slice(0, 200) + "..." : text));
   }
-  if (cleaned.endsWith("```")) {
-    cleaned = cleaned.substring(0, cleaned.length - 3);
-  }
-  cleaned = cleaned.trim();
-  return JSON.parse(cleaned);
+  
+  const jsonStr = cleaned.slice(startIdx, endIdx + 1);
+  return JSON.parse(jsonStr);
 }
 
 // NVIDIA 系統提示詞，用來規範結構化 JSON 輸出
@@ -345,7 +346,7 @@ async function callNvidiaAPI(messages: any[], jsonMode = false): Promise<string>
   }
 
   const payload: any = {
-    model: "llama-3.3-nemotron-super-49b-v1.5",
+    model: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
     messages: messages,
     temperature: 0.2,
     max_tokens: 4096,

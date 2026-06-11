@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, ReactNode } from "react";
 import { 
   VideoSummaryJSON, 
   SupportedLanguage, 
@@ -46,7 +46,7 @@ interface DashboardProps {
 }
 
 // inputType 對應的中文標籤與圖示
-const INPUT_TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode }> = {
+const INPUT_TYPE_LABELS: Record<string, { label: string; icon: ReactNode }> = {
   file: { label: "檔案上載", icon: <FileText className="w-3 h-3" /> },
   recording: { label: "即時錄音", icon: <Mic className="w-3 h-3" /> },
   text: { label: "貼上字稿", icon: <FileText className="w-3 h-3" /> },

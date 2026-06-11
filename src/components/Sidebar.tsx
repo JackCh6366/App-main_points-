@@ -14,7 +14,8 @@ import {
   ChevronRight, 
   Layers3,
   Calendar,
-  X
+  X,
+  Link
 } from "lucide-react";
 
 interface SidebarProps {
@@ -30,12 +31,15 @@ export function Sidebar({ history, activeId, onSelect, onDelete, onClearAll }: S
   const [deletingId, setDeletingId] = useState<string | null>(null);
   
   // 依輸入種類返回對應圖示
-  const getInputIcon = (type: "file" | "recording" | "text", fileType?: string) => {
-    if (type === "text") {
+  const getInputIcon = (type: "file" | "recording" | "text" | "link" | "transcript", fileType?: string) => {
+    if (type === "text" || type === "transcript") {
       return <FileText className="w-4 h-4 text-blue-500 shrink-0" />;
     }
     if (type === "recording") {
       return <Mic className="w-4 h-4 text-red-500 shrink-0" />;
+    }
+    if (type === "link") {
+      return <Link className="w-4 h-4 text-orange-500 shrink-0" />;
     }
     if (fileType && fileType.startsWith("video")) {
       return <Video className="w-4 h-4 text-emerald-500 shrink-0" />;

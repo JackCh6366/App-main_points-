@@ -71,6 +71,99 @@ async function fetchWithRetry(
     throw err;
   }
 }
+
+// 輔助：從 YouTube 網址萃取 11 碼 Video ID
+function getYouTubeId(url: string): string | null {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+}
+
+interface LinkMetadata {
+  title: string;
+  author?: string;
+  description?: string;
+  source?: string;
+}
+
+// 輔助：預先獲取網址的 Title 與 Metadata
+async function getUrlMetadata(url: string): Promise<LinkMetadata> {
+  const result: LinkMetadata = { title: "", source: "web" };
+  const ytId = getYouTubeId(url);
+
+  if (ytId) {
+    result.source = "youtube";
+    try {
+      const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${ytId}&format=json`;
+      const res = await fetch(oembedUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
+      });
+      if (res.ok) {
+        const data = await res.json() as any;
+        result.title = data.title || "";
+        result.author = data.author_name || "";
+      }
+    } catch (e) {
+      console.warn("[Metadata Scraper] 獲取 YouTube oEmbed 失敗:", e);
+    }
+    
+    if (!result.title) {
+      result.title = `YouTube 影片 (${ytId})`;
+    }
+    return result;
+  }
+
+  try {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 6000); // 6秒超時
+    
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept": "text/html,application/xhtml+xml,application/xml"
+      }
+    });
+    
+    clearTimeout(id);
+
+    if (response.ok) {
+      const html = await response.text();
+      const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      if (titleMatch && titleMatch[1]) {
+        result.title = titleMatch[1].trim();
+      }
+      
+      const descMatch = html.match(/<meta\s+[^>]*name=["']description["'][^>]*content=["']([\s\S]*?)["']/i) ||
+                        html.match(/<meta\s+[^>]*content=["']([\s\S]*?)["'][^>]*name=["']description["']/i) ||
+                        html.match(/<meta\s+[^>]*property=["']og:description["'][^>]*content=["']([\s\S]*?)["']/i);
+      if (descMatch && descMatch[1]) {
+        result.description = descMatch[1].trim();
+      }
+    }
+  } catch (error) {
+    console.warn("[Metadata Scraper] 獲取網頁失敗:", error);
+  }
+
+  return result;
+}
+
+// 輔助：強健的 JSON 解析器，支援從 Markdown 標記或包含額外文字的回應中提取 JSON 對象
+function parseJSONResponse(text: string): any {
+  let cleaned = text.trim();
+  
+  // 尋找第一個 '{' 與最後一個 '}'
+  const startIdx = cleaned.indexOf('{');
+  const endIdx = cleaned.lastIndexOf('}');
+  
+  if (startIdx === -1 || endIdx === -1 || startIdx > endIdx) {
+    throw new Error("模型回傳的內容無法解析為有效的 JSON 結構:\n" + (text.length > 200 ? text.slice(0, 200) + "..." : text));
+  }
+  
+  const jsonStr = cleaned.slice(startIdx, endIdx + 1);
+  return JSON.parse(jsonStr);
+}
  
 // ─── JSON schema（summarize / translate 共用）────────────────────────────────
 const SUMMARY_SCHEMA = {
@@ -307,7 +400,7 @@ JSON 格式：{"title":"","summary":"","timeline":[{"time":"MM:SS","title":"","d
  
   const callNvidia = async (messages: any[], jsonMode = false) => {
     const payload: any = {
-      model: 'llama-3.3-nemotron-super-49b-v1.5',
+      model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
       messages,
       temperature: 0.2,
       max_tokens: 4096
@@ -319,7 +412,10 @@ JSON 格式：{"title":"","summary":"","timeline":[{"time":"MM:SS","title":"","d
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify(payload)
     });
-    const d: any = await r.json();
+    const rawText = await r.text();
+    console.log('[NVIDIA Raw Response Status]:', r.status);
+    console.log('[NVIDIA Raw Response Content]:', rawText);
+    const d: any = JSON.parse(rawText);
     if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
     return d?.choices?.[0]?.message?.content || '';
   };
@@ -348,22 +444,55 @@ JSON 格式：{"title":"","summary":"","timeline":[{"time":"MM:SS","title":"","d
       { role: 'system', content: NVIDIA_SYSTEM },
       { role: 'user', content: `請將以下 JSON 翻譯成${langMap[targetLanguage] || '繁體中文'}，保持結構不變：\n${JSON.stringify(summaryData, null, 2)}` }
     ], true);
-    const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-    return JSON.parse(cleaned);
+    return parseJSONResponse(raw);
   }
  
   // ── summarize ──
   if (action === 'summarize') {
-    const userMsg = type === 'link'
-      ? `請根據連結【${transcript}】的標題與知識，用繁體中文生成結構化 JSON。摘要開頭請加「（注意：由連結元資料推演生成）」`
-      : `請針對以下內容用繁體中文生成結構化 JSON：\n\n${transcript}`;
+    let userMsg = '';
+    if (type === 'link') {
+      let meta: LinkMetadata = { title: '' };
+      try {
+        meta = await getUrlMetadata(transcript);
+        console.log(`[NVIDIA Link Local] 成功預抓 metadata: 標題="${meta.title}", 作者="${meta.author || ''}"`);
+      } catch (err) {
+        console.warn("[NVIDIA Link Local] 預抓 metadata 失敗，將使用原始 URL 推演...", err);
+      }
+
+      const ytId = getYouTubeId(transcript);
+      const sourceNote = ytId
+        ? `此為 YouTube 影片，Video ID: ${ytId}`
+        : `此為一般網頁連結`;
+
+      userMsg = `
+你是一位頂級的影音網址與線上媒體智慧推導大師。
+使用者提供了以下連結：【${transcript}】
+${sourceNote}
+
+系統預先抓取到的網頁資訊如下：
+- 標題：【${meta.title || "未知標題"}】
+- 作者/來源：【${meta.author || "未知"}】
+- 描述：【${meta.description || "無可用描述"}】
+
+請你根據上述資訊，運用你的知識庫，對此影音或網頁內容進行深度智慧推演，並完全以繁體中文生成對應的結構化資訊。
+摘要開頭請加「（注意：由連結元資料推演生成）」
+
+--- 提供連結資訊 ---
+原始網址：${transcript}
+標題：${meta.title || "未知"}
+來源作者：${meta.author || "未知"}
+頁面描述：${meta.description || "無"}
+--- 連結資訊結束 ---
+`;
+    } else {
+      userMsg = `請針對以下內容用繁體中文生成結構化 JSON：\n\n${transcript}`;
+    }
  
     const raw = await callNvidia([
       { role: 'system', content: NVIDIA_SYSTEM },
       { role: 'user', content: userMsg }
     ], true);
-    const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-    return JSON.parse(cleaned);
+    return parseJSONResponse(raw);
   }
  
   throw new Error(`不支援的 action: ${action}`);
@@ -372,49 +501,56 @@ JSON 格式：{"title":"","summary":"","timeline":[{"time":"MM:SS","title":"","d
 // ─── Vite config ──────────────────────────────────────────────────────────────
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        name: "api-emulator",
+        configureServer(server) {
+          server.middlewares.use(async (req, res, next) => {
+            const url = req.url || '';
+            console.log(`[Vite Middleware] Incoming request: ${req.method} ${url}`);
+   
+            // 只攔截 /api 開頭
+            if (!url.startsWith('/api')) return next();
+   
+            console.log(`[API] ${req.method} ${url}`);
+   
+            try {
+              const body = await readBody(req);
+              console.log(`[API] body keys: ${Object.keys(body).join(', ')}`);
+   
+              const { provider, action } = body;
+   
+              if (!provider || !action) {
+                return sendJson(res, 400, { error: 'Request body 缺少 provider 或 action，請確認前端送出格式正確' });
+              }
+   
+              let result: any;
+              if (provider === 'gemini') {
+                result = await handleGemini(body);
+              } else if (provider === 'nvidia') {
+                result = await handleNvidia(body);
+              } else {
+                return sendJson(res, 400, { error: `不支援的 provider: ${provider}` });
+              }
+   
+              sendJson(res, 200, result);
+   
+            } catch (err: any) {
+              console.error('[API] 錯誤:', err.message);
+              sendJson(res, 500, { error: err.message || '伺服器錯誤' });
+            }
+          });
+        }
+      }
+    ],
     resolve: {
       alias: { '@': path.resolve(process.cwd(), '.') },
     },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
-      configureServer(server) {
-        server.middlewares.use(async (req, res, next) => {
-          const url = req.url || '';
- 
-          // 只攔截 /api 開頭
-          if (!url.startsWith('/api')) return next();
- 
-          console.log(`[API] ${req.method} ${url}`);
- 
-          try {
-            const body = await readBody(req);
-            console.log(`[API] body keys: ${Object.keys(body).join(', ')}`);
- 
-            const { provider, action } = body;
- 
-            if (!provider || !action) {
-              return sendJson(res, 400, { error: 'Request body 缺少 provider 或 action，請確認前端送出格式正確' });
-            }
- 
-            let result: any;
-            if (provider === 'gemini') {
-              result = await handleGemini(body);
-            } else if (provider === 'nvidia') {
-              result = await handleNvidia(body);
-            } else {
-              return sendJson(res, 400, { error: `不支援的 provider: ${provider}` });
-            }
- 
-            sendJson(res, 200, result);
- 
-          } catch (err: any) {
-            console.error('[API] 錯誤:', err.message);
-            sendJson(res, 500, { error: err.message || '伺服器錯誤' });
-          }
-        });
-      },
     },
   };
 });
