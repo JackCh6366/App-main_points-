@@ -4,5 +4,14 @@ dist/
 coverage/
 .DS_Store
 *.log
-.env*
+ 
+# 環境變數金鑰檔案 — 絕對不可上傳 GitHub
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+ 
+# 保留範例檔供參考
 !.env.example
+ 
