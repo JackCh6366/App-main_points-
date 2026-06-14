@@ -147,6 +147,140 @@ async function getUrlMetadata(url: string): Promise<LinkMetadata> {
   return result;
 }
  
+// 輔助：修復與清洗 JSON 字串（處理 trailing commas、未轉義控制字元、單引號等）
+function cleanAndRepairJson(badJson: string): string {
+  let result = "";
+  let inString = false;
+  let stringChar = "";
+  let escaped = false;
+  const stack: string[] = [];
+
+  for (let i = 0; i < badJson.length; i++) {
+    const char = badJson[i];
+
+    if (escaped) {
+      if (char === "'") {
+        if (result.endsWith("\\")) {
+          result = result.slice(0, -1);
+        }
+        result += "'";
+      } else {
+        result += char;
+      }
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      result += char;
+      if (inString) {
+        escaped = true;
+      }
+      continue;
+    }
+
+    if (inString) {
+      if (char === stringChar) {
+        inString = false;
+        result += '"';
+      } else if (char === '"' && stringChar === "'") {
+        result += '\\"';
+      } else if (char === "\n") {
+        result += "\\n";
+      } else if (char === "\r") {
+        result += "\\r";
+      } else if (char === "\t") {
+        result += "\\t";
+      } else {
+        result += char;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      inString = true;
+      stringChar = char;
+      result += '"';
+      continue;
+    }
+
+    // 過濾註解
+    if (char === "/" && badJson[i + 1] === "/") {
+      while (i < badJson.length && badJson[i] !== "\n") {
+        i++;
+      }
+      continue;
+    }
+    if (char === "/" && badJson[i + 1] === "*") {
+      i += 2;
+      while (i < badJson.length && !(badJson[i] === "*" && badJson[i + 1] === "/")) {
+        i++;
+      }
+      i++;
+      continue;
+    }
+
+    // 紀錄括號匹配以補齊截斷的 JSON
+    if (char === "{") {
+      stack.push("}");
+    } else if (char === "[") {
+      stack.push("]");
+    } else if (char === "}") {
+      if (stack[stack.length - 1] === "}") {
+        stack.pop();
+      }
+    } else if (char === "]") {
+      if (stack[stack.length - 1] === "]") {
+        stack.pop();
+      }
+    }
+
+    // 移除尾隨逗號 (Trailing Commas)
+    if (char === ",") {
+      let lookAheadIdx = i + 1;
+      let nextChar = "";
+      while (lookAheadIdx < badJson.length) {
+        const next = badJson[lookAheadIdx];
+        if (next === "/" && badJson[lookAheadIdx + 1] === "/") {
+          while (lookAheadIdx < badJson.length && badJson[lookAheadIdx] !== "\n") {
+            lookAheadIdx++;
+          }
+          continue;
+        }
+        if (next === "/" && badJson[lookAheadIdx + 1] === "*") {
+          lookAheadIdx += 2;
+          while (lookAheadIdx < badJson.length && !(badJson[lookAheadIdx] === "*" && badJson[lookAheadIdx + 1] === "/")) {
+            lookAheadIdx++;
+          }
+          lookAheadIdx += 1;
+          continue;
+        }
+        if (!/\s/.test(next)) {
+          nextChar = next;
+          break;
+        }
+        lookAheadIdx++;
+      }
+      if (nextChar === "}" || nextChar === "]") {
+        continue; // 略過此逗號
+      }
+    }
+
+    result += char;
+  }
+
+  if (inString) {
+    result += '"';
+  }
+
+  while (stack.length > 0) {
+    const closing = stack.pop();
+    result += closing;
+  }
+
+  return result;
+}
+
 // 輔助：強健的 JSON 解析器
 function parseJSONResponse(text: string): any {
   let cleaned = text.trim();
@@ -159,7 +293,8 @@ function parseJSONResponse(text: string): any {
   }
   
   const jsonStr = cleaned.slice(startIdx, endIdx + 1);
-  return JSON.parse(jsonStr);
+  const repaired = cleanAndRepairJson(jsonStr);
+  return JSON.parse(repaired);
 }
  
 // ─── JSON schema（summarize / translate 共用）────────────────────────────────
@@ -331,7 +466,7 @@ async function handleGemini(body: any): Promise<any> {
     const d: any = await r.json();
     if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
     const txt = d?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    return JSON.parse(txt.trim());
+    return parseJSONResponse(txt);
   }
  
   // ── summarize ─────────────────────────────────────────────────────────────
@@ -458,7 +593,7 @@ ${groundedBackground}
       const structData: any = await structRes.json();
       if (structData.error) throw new Error(structData.error.message);
       const txt = structData?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      return JSON.parse(txt.trim());
+      return parseJSONResponse(txt);
     }
  
     // 文字逐字稿
@@ -499,7 +634,7 @@ ${transcript}
       const d: any = await r.json();
       if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
       const txt = d?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      return JSON.parse(txt.trim());
+      return parseJSONResponse(txt);
     }
  
     // 媒體檔案 / 錄音
@@ -540,7 +675,7 @@ ${transcript}
       const d: any = await r.json();
       if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
       const txt = d?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      return JSON.parse(txt.trim());
+      return parseJSONResponse(txt);
     }
  
     throw new Error('不支援的處理類型');
