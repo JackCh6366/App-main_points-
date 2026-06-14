@@ -166,39 +166,52 @@ function parseJSONResponse(text: string): any {
 const SUMMARY_SCHEMA = {
   type: 'object',
   properties: {
-    title:   { type: 'string' },
-    summary: { type: 'string' },
+    title: {
+      type: 'string',
+      description: "基於本影音或內容，自動生成的主題或最切合的標題。必須是繁體中文 (台灣習慣之繁體中文) (必填)",
+    },
+    summary: {
+      type: 'string',
+      description: "500-800字以上極其詳盡、結構清晰且分段的繁體中文深度概要。要能透徹分析內容宗旨、背景脈絡、核心論點與結論，請使用豐富描述性長句，絕對不可簡略或只給出一小段。必須是繁體中文 (台灣習慣之繁體中文) (必填)",
+    },
     timeline: {
       type: 'array',
+      description: "本內容或影音循序漸進的完整詳細時間軸摘要。請詳細覆蓋整個影音的所有核心段落（至少 8-15 個時間點，若內容極短則依實際長度）。如果有明確秒數，請務必精準標記(例如 00:15)，若無可概略估算(例如 00:00, 01:30等) (必填)",
       items: {
         type: 'object',
         properties: {
-          time:        { type: 'string' },
-          title:       { type: 'string' },
-          description: { type: 'string' }
+          time: { type: 'string', description: "時間標記, 格式必須如 MM:SS 或 HH:MM:SS" },
+          title: { type: 'string', description: "此項目的精炼大綱主題。必須是繁體中文 (台灣習慣之繁體中文)" },
+          description: { type: 'string', description: "該段落主要談論細節、要點概要。必須是繁體中文 (台灣習慣之繁體中文)，且敘述應儘可能詳實完整，以 2-4 句詳細記錄該時段的關鍵對話、細節與重要論點，不要簡化" }
         },
         required: ['time', 'title', 'description']
       }
     },
     mindmap: {
       type: 'array',
+      description: "基於本內容的階層式樹狀重點大綱，最多支持3層巢狀結構。一級核心主題必須在 5-8 個之間。請確保所有節點的 label 都使用具體、描述性的詞句 (約 10-25 字，包含行動或實質內容，例如「採用 React 進行高效組件開發」而非單純的「技術」或「組件」)，以確保心智圖資訊量豐富，絕對不可敷衍簡略。必須是繁體中文 (台灣習慣之繁體中文) (必填)",
       items: {
         type: 'object',
         properties: {
-          id:    { type: 'string' },
-          label: { type: 'string' },
+          id: { type: 'string', description: "唯一識別碼 e.g. 'm1'" },
+          label: { type: 'string', description: "一級核心主題名稱 (10-25字)。必須是繁體中文 (台灣習慣之繁體中文)" },
           children: {
             type: 'array',
+            description: "二級核心重點。每個一級主題下應包含至少 2-4 個二級節點",
             items: {
               type: 'object',
               properties: {
-                id:    { type: 'string' },
-                label: { type: 'string' },
+                id: { type: 'string', description: "唯一識別碼 e.g. 'm1-1'" },
+                label: { type: 'string', description: "二級核心重點名稱 (10-25字)。必須是繁體中文 (台灣習慣之繁體中文)" },
                 children: {
                   type: 'array',
+                  description: "三級關鍵細節。每個二級重點下應包含至少 2-4 個三級節點，詳細記錄具體細節",
                   items: {
                     type: 'object',
-                    properties: { id: { type: 'string' }, label: { type: 'string' } },
+                    properties: {
+                      id: { type: 'string', description: "唯一識別碼 e.g. 'm1-1-1'" },
+                      label: { type: 'string', description: "三級關鍵細節描述 (15-30字)，請儘可能完整詳細描述具體細節，不要簡略。必須是繁體中文 (台灣習慣之繁體中文)" }
+                    },
                     required: ['id', 'label']
                   }
                 }
@@ -212,32 +225,45 @@ const SUMMARY_SCHEMA = {
     },
     insights: {
       type: 'array',
+      description: "影音或內容中的關鍵觀點與金句 quote，請提煉 4-6 個極具啟發與激勵性的項目，以利深度閱讀。必須是繁體中文 (台灣習慣之繁體中文) (必填)",
       items: {
         type: 'object',
-        properties: { point: { type: 'string' }, quote: { type: 'string' } },
+        properties: {
+          point: { type: 'string', description: "核心論點或啟發，請使用詳細的繁體中文 (台灣習慣之繁體中文) 說明" },
+          quote: { type: 'string', description: "對應的精闢金句或原話重現/總結，必須是繁體中文 (台灣習慣之繁體中文)" }
+        },
         required: ['point', 'quote']
       }
     },
     actionItems: {
       type: 'array',
+      description: "本影音提出的下一步行動、可實踐的目標指引 e.g. 會議行動、學習任務等，請列出 4-6 個具體項目。必須是繁體中文 (台灣習慣之繁體中文) (必填)",
       items: {
         type: 'object',
-        properties: { task: { type: 'string' }, reason: { type: 'string' } },
+        properties: {
+          task: { type: 'string', description: "具體的行動任務，必須是繁體中文 (台灣習慣之繁體中文)" },
+          reason: { type: 'string', description: "做此任務的原因、關鍵價值與建議落實方式，敘述應詳盡充實，必須是繁體中文 (台灣習慣之繁體中文)" }
+        },
         required: ['task', 'reason']
       }
     },
-    keywords: { type: 'array', items: { type: 'string' } }
+    keywords: {
+      type: 'array',
+      description: "本內容的主題關鍵字列表，5-8個，必須是繁體中文 (台灣習慣之繁體中文) (必填)",
+      items: {
+        type: 'string'
+      }
+    }
   },
   required: ['title', 'summary', 'timeline', 'mindmap', 'insights', 'actionItems', 'keywords']
 };
  
-const GEMINI_URL = (key: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${key}`;
+const GEMINI_URL = (key: string, model = 'gemini-2.5-pro') =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
  
 const GEMINI_HEADERS = { 'Content-Type': 'application/json', 'User-Agent': 'aistudio-build' };
  
-const SYSTEM_INSTRUCTION = `你是一個專業多國語文音訊與影片分析整理機器人。
-擅長聆聽各類影音的多媒體封包與文字，轉換成最精緻結構化的繁體中文 JSON 分類。`;
+const SYSTEM_INSTRUCTION = `你是一個專業多國語文音訊與影片分析整理機器人。你必須以繁體中文 (台灣習慣用語) 進行所有回覆，確保轉換為最精緻且內容極其詳盡結構化的繁體中文 JSON，嚴禁簡體字及中國大陸用語，如「信息」、「菜單」、「鏈接」、「優化」、「視頻」、「音頻」、「屏幕」應轉換為「資訊」、「選單」、「連結」、「最佳化」、「影片」、「音訊」、「螢幕」等。`;
  
 // ─── Gemini handler ───────────────────────────────────────────────────────────
 async function handleGemini(body: any): Promise<any> {
@@ -252,7 +278,7 @@ async function handleGemini(body: any): Promise<any> {
     const formattedContents: any[] = [
       {
         role: 'user',
-        parts: [{ text: `你是本影片的 AI 問答助手。影音內容背景：\n${transcript || '無'}\n\n請基於內容有深度地回答，一律使用繁體中文。` }]
+        parts: [{ text: `你是本影片的智能 AI 問答助手。影音內容背景：\n${transcript || '無'}\n\n請基於這部影音所談論的事實、亮點與觀點，有深度、熱情、客觀地回答使用者的提問。若影音中沒有直接談及，也可以結合你的知識庫，但要特別說明「影片中並非主要提及，但補充如下...」。一律使用「繁體中文 (台灣習慣用語)」回答，嚴禁簡體字與大陸用語。` }]
       }
     ];
     if (Array.isArray(chatHistory)) {
@@ -263,12 +289,13 @@ async function handleGemini(body: any): Promise<any> {
     }
     formattedContents.push({ role: 'user', parts: [{ text: userMessage }] });
  
-    const r = await fetchWithRetry(GEMINI_URL(apiKey), {
+    const r = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-2.5-flash'), {
       method: 'POST', headers: GEMINI_HEADERS,
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+        systemInstruction: { parts: [{ text: "你是一個附屬於影片摘要工具的 AI 專屬互動解答助理，專長是以繁體中文 (台灣習慣用語) 就一部影片的細節進行極深度解答、觀點拓展與實踐方法擴充，嚴禁使用簡體字與大陸用語。" }] },
         contents: formattedContents,
         generationConfig: {
+          temperature: 0.7,
           maxOutputTokens: 8192, // ✅ 新增：Chat 回應最大輸出上限
         }
       })
@@ -284,13 +311,14 @@ async function handleGemini(body: any): Promise<any> {
       en: '英文 (English)', ja: '日文 (Japanese)',
       ko: '韓文 (Korean)', 'zh-tw': '繁體中文 (Traditional Chinese)'
     };
-    const r = await fetchWithRetry(GEMINI_URL(apiKey), {
+    const targetLangDesc = langMap[targetLanguage] || '繁體中文 (Traditional Chinese)';
+    const r = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-2.5-flash'), {
       method: 'POST', headers: GEMINI_HEADERS,
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+        systemInstruction: { parts: [{ text: `你是一個專業翻譯程序，負責將特定的結構化 JSON 按原格式精準翻譯成指定語言：${targetLangDesc}。你必須以該語言最適切、流暢的形式進行翻譯。若目標語言為繁體中文，必須使用台灣習慣用語，嚴禁簡體字。不要修改 JSON 中的 Key。` }] },
         contents: [{
           role: 'user',
-          parts: [{ text: `請將以下 JSON 中所有文字翻譯成【${langMap[targetLanguage] || '繁體中文'}】，保持 JSON 結構不變，id / time 不翻譯。\n${JSON.stringify(summaryData, null, 2)}` }]
+          parts: [{ text: `請將以下 JSON 中所有重點整理的文字內容完美翻譯成【${targetLangDesc}】。\n${JSON.stringify(summaryData, null, 2)}` }]
         }],
         generationConfig: {
           responseMimeType: 'application/json',
@@ -310,37 +338,120 @@ async function handleGemini(body: any): Promise<any> {
   if (action === 'summarize') {
     // 影音連結：先用 Google Search 抓資料，再結構化
     if (type === 'link') {
-      const searchRes = await fetchWithRetry(GEMINI_URL(apiKey), {
-        method: 'POST', headers: GEMINI_HEADERS,
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-          contents: [{
-            role: 'user',
-            parts: [{ text: `請搜尋此連結的詳細資訊（標題、作者、章節大綱、時間軸等）：【${transcript}】\n請用繁體中文輸出完整的背景資料。` }]
-          }],
-          tools: [{ googleSearch: {} }],
-          generationConfig: {
-            maxOutputTokens: 8192, // ✅ 新增：搜尋階段輸出上限
-          }
-        })
-      });
-      const searchData: any = await searchRes.json();
-      if (searchData.error) throw new Error(searchData.error.message);
-      const background = searchData?.candidates?.[0]?.content?.parts?.[0]?.text || `連結：${transcript}`;
+      let groundedBackground = '';
+      let meta: LinkMetadata = { title: "" };
  
-      const structRes = await fetchWithRetry(GEMINI_URL(apiKey), {
+      try {
+        meta = await getUrlMetadata(transcript);
+        console.log(`[Link Summarize Emulator] 成功預先抓取 metadata: 標題="${meta.title}", 作者="${meta.author || ''}"`);
+      } catch (err) {
+        console.warn("[Link Summarize Emulator] 預抓 metadata 失敗，將降級為直接聯網...", err);
+      }
+ 
+      try {
+        let searchPrompt = "";
+        if (meta.title) {
+          searchPrompt = `你是一位優秀的網頁資訊檢索與內容探勘大師。
+我們目標是為特定網址：【${transcript}】整理精確重點。
+系統已預抓到該網址的資訊：
+- 標題：【${meta.title}】
+- 作者/來源：【${meta.author || "未知"}】
+- 原始連結：【${transcript}】
+ 
+請你使用內建的 Google 搜尋工具，認真查詢該影片/網頁【${meta.title}】的實際詳細背景。
+要求：
+1. 必須查到該影片/網頁的正確中英文標題、講者 (與創作者)、發佈頻道、以及核心宗旨。
+2. 盡可能在公開網路搜集該影片的章節、時間標記大綱、分段要點、公開文字稿、或網路上對此影片的所有重點解讀與摘要。
+3. 如果是在 YouTube，請結合你的搜尋，重組出該影片一條一條的詳細時間軸章節（格式如 MM:SS）與各節內容。
+請你使用「繁體中文 (Traditional Chinese，台灣習慣用語)」將上述查找到的具體事實，編製成一篇非常完整、客觀、且高含金量的背景資料白皮書報告。`;
+        } else {
+          searchPrompt = `幕大師。
+使用者提供了一個線上網址或 YouTube 影片連結：【${transcript}】。
+請你使用內建的 Google 搜尋工具，認真查詢該連結的所有詳細背景。
+要求：
+1. 必須查到該影片/網頁的正確中英文標題、講者 (與創作者)、發佈頻道、以及核心宗旨。
+2. 盡可能在公開網路搜集該影片的章節、時間標記大綱、分段要點、公開文字稿、或網路上對此影片的所有重點解讀與摘要。
+3. 如果是在 YouTube，請結合你的搜尋，重組出該影片一條一條的詳細時間軸章節（格式如 MM:SS）與各節內容。
+請你使用「繁體中文 (Traditional Chinese，台灣習慣用語)」將上述查找到的具體事實，編製成一篇非常完整、客觀、且高含金量的背景資料白皮書報告。`;
+        }
+ 
+        const searchRes = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-2.5-flash'), {
+          method: 'POST', headers: GEMINI_HEADERS,
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: "你是一個專業聯網精準檢索與事實彙整機器人。負責深入挖掘各類 YouTube 影片與網頁的文字內容與分段章節，並拒絕任何天馬行空的想像，所有敘述必須基於搜尋到的網頁事實，且所有回答皆必須使用台灣習慣之繁體中文。" }] },
+            contents: [{
+              role: 'user',
+              parts: [{ text: searchPrompt }]
+            }],
+            tools: [{ googleSearch: {} }],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 8192,
+            }
+          })
+        });
+        const searchData: any = await searchRes.json();
+        if (searchData.error) throw new Error(searchData.error.message);
+        groundedBackground = searchData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      } catch (searchError: any) {
+        console.warn("[Link Summarize Emulator] 第一階段聯網失敗，降級智慧推理...", searchError);
+        groundedBackground = "";
+      }
+ 
+      let promptText = "";
+      if (groundedBackground && groundedBackground.trim() !== "") {
+        promptText = `你是一位頂級的影音智慧重點整理與學習大師。
+以下是第一階段聯網檢索所獲得關於連結【${transcript}】的真實背景全文、可能的大綱或轉逐字稿資料：
+--- 聯網背景事實資料開始 ---
+${groundedBackground}
+--- 聯網背景事實資料結束 ---
+ 
+請你根據上面真實、確定無誤的背景資料，進行一次堪稱完美且高水準的繁體中文重點智慧彙整。
+要求：
+- 必須全部以「繁體中文 (Traditional Chinese，台灣習慣用語)」提供回應各個欄位，嚴禁簡體字。
+- 所有重點大綱、時間軸、心智圖、關鍵金句都必須精確切合上述那部影片或網頁的「真實內容」，絕對不能張冠黎戴、或者是產生不相干的幻想！
+- 為了最大化產出完整與高含金量的分析，請利用模型最大承載與輸出能力，為各欄位生成極其詳盡、深度的分析，絕對不可敷衍簡略。
+- 提取切實精巧的「標題」 (title)。
+- 整理出一個 500-800 字以上、結構清晰且分段的「概要摘要」(summary)，必須透徹分析內容主旨、背景與核心意圖，富含細節，避免高維度的籠統總結。
+- 根據背景事實，建立一組循序漸進的完整詳細「時間軸摘要」 (timeline)，請詳細覆蓋整個內容（至少 8-15 個時間點，若內容極短則依實際長度），格式必須如 'MM:SS' 或 'HH:MM:SS'，並詳細描述（每個時間點 2-4 句繁體中文詳細記錄該時段的關鍵細節與論點，不要簡化）。
+- 建立最高 3 層的樹狀階層式大綱「心智圖 (mindmap)」，一級主題必須在 5-8 個之間，且每個一級主題下必須至少有 2-4 個二級重點，每個二級重點下至少有 2-4 個三級關鍵細節。所有節點的 label 必須使用具體描述性的詞句 (約 10-25 字，例如「採用 React 進行高效組件開發」而非單純的「技術」或「組件」)，以確保心智圖資訊量豐富，以利前台渲染樹狀圖。其 id 請使用 m1, m1-1, m1-2... 等。
+- 提煉至少 4-6 個富有實踐啟發、能激勵人心的「關鍵觀點與金句」 (insights)，且觀點 point 描述與 quote 金句內容應充實詳細。
+- 建立至少 4-6 個具實施價值、能落地實踐的「行動清單」 (actionItems)，提供詳細的實作步驟任務 task 與執行原因 reason。
+- 提取最富主題代表性的 5-8 個「關鍵字」 (keywords)。`;
+      } else {
+        promptText = `你是一位頂級的影音網址與線上媒體智慧推導大師。
+目前聯網查詢未能取得完整文字稿，但系統已預先抓取了該連結的網頁元資料：
+- 標題：【${meta.title || "未知影片/網頁"}】
+- 作者/來源：【${meta.author || "未知"}】
+- 描述：【${meta.description || "無"}】
+- 原始網址：【${transcript}】
+ 
+請你根據以上元資料，搭配你的知識庫，針對此影片或網頁進行深度智慧推演與整理。
+要求：
+- 必須全部以「繁體中文 (Traditional Chinese，台灣習慣用語)」提供回應各個欄位，嚴禁簡體字。
+- 為了最大化產出完整與高含金量的分析，請利用模型最大承載與輸出能力，為各欄位生成極其詳盡、深度的分析，絕對不可敷衍簡略。
+- 在「summary」摘要首句，必須加上說明：「（注意：本摘要由連結元資料搭配知識庫推演生成，建議改用 Google Gemini 模式以獲得聯網即時搜尋的精準結果。）」且總字數需達 500-800 字以上，結構清晰且分段，敘述詳盡。
+- 提取切實精巧的「標題」(title)，若已有標題請直接沿用並精煉。
+- 合理估算並生成一組循序漸進的完整詳細「時間軸摘要」(timeline)，請包含 8-15 個時間點，格式如 MM:SS 或 HH:MM:SS，且每個時間點需以 2-4 句繁體中文詳細記錄該時段的關鍵細節，不要簡化。
+- 建立最高 3 層的樹狀階層式大綱「心智圖」(mindmap)，一級主題必須在 5-8 個之間，且每個一級主題下必須至少有 2-4 個二級重點，每個二級重點下至少有 2-4 個三級關鍵細節。所有節點的 label 必須使用具體描述性的詞句 (約 10-25 字，例如「採用 React 進行高效組件開發」而非單純的「技術」或「組件」)，以確保心智圖資訊量豐富，其 id 請使用 m1, m1-1... 等。
+- 提煉至少 4-6 個富有啟發的「關鍵觀點與金句」(insights)，且內容描述應充實詳細。
+- 建立至少 4-6 個具落地可行性的「行動清單」(actionItems)。
+- 提取最富主題代表性的 5-8 個「關鍵字」(keywords)。`;
+      }
+ 
+      const structRes = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-2.5-pro'), {
         method: 'POST', headers: GEMINI_HEADERS,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
           contents: [{
             role: 'user',
-            parts: [{ text: `根據以下背景資料，用繁體中文生成結構化 JSON 重點整理：\n\n${background}\n\n原始連結：${transcript}` }]
+            parts: [{ text: promptText }]
           }],
           generationConfig: {
             responseMimeType: 'application/json',
             responseSchema: SUMMARY_SCHEMA,
             temperature: 0.2,
-            maxOutputTokens: 8192, // ✅ 新增：結構化輸出最大上限
+            maxOutputTokens: 8192,
           }
         })
       });
@@ -352,19 +463,36 @@ async function handleGemini(body: any): Promise<any> {
  
     // 文字逐字稿
     if (type === 'transcript' || type === 'text') {
-      const r = await fetchWithRetry(GEMINI_URL(apiKey), {
+      const promptText = `你數位頂級的影音智慧重點整理與學習大師。
+請針對以下影音的「逐字稿、字幕、或文字逐字記錄」內容，進行抽絲剝繭的深度思考與整理。
+要求：
+- 必須全部以「繁體中文 (Traditional Chinese，台灣習慣用語)」提供回應各個欄位，嚴禁簡體字。
+- 為了最大化產出完整與高含金量的分析，請利用模型最大承載與輸出能力，為各欄位生成極其詳盡、深度的分析，絕對不可敷衍簡略。
+- 提取切實精巧的「標題」 (title)。
+- 整理出一個 500-800 字以上、結構清晰且分段的「概要摘要」(summary)，必須透徹分析內容主旨、背景與核心意圖，富含細節，避免高維度的籠統總結。
+- 建立一組循序漸進的完整詳細「時間軸摘要」 (timeline)，請詳細覆蓋整個內容（至少 8-15 個時間點，若內容極短則依實際長度），格式必須如 'MM:SS' 或 'HH:MM:SS'，並詳細描述（每個時間點 2-4 句繁體中文詳細記錄該時段的關鍵細節與論點，不要簡化）。
+- 建立最高 3 層的樹狀階層式大綱「心智圖 (mindmap)」，一級主題必須在 5-8 個之間，且每個一級主題下必須至少有 2-4 個二級重點，每個二級重點下至少有 2-4 個三級關鍵細節。所有節點的 label 必須使用具體描述性的詞句 (約 10-25 字，例如「採用 React 進行高效組件開發」而非單純的「技術」或「組件」)，以確保心智圖資訊量豐富，以利前台渲染樹狀圖. 其 id 請使用 m1, m1-1, m1-2... 等。
+- 提煉至少 4-6 個富有實踐啟發、能激勵人心的「關鍵觀點與金句」 (insights)，且觀點 point 描述與 quote 金句內容應充實詳細。
+- 建立至少 4-6 個具實施價值、能落地實踐的「行動清單」 (actionItems)，提供詳細的實作步驟任務 task 與執行原因 reason。
+- 提取最富主題代表性的 5-8 個「關鍵字」 (keywords)。
+ 
+--- 內容開始 ---
+${transcript}
+--- 內容結束 ---`;
+ 
+      const r = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-2.5-pro'), {
         method: 'POST', headers: GEMINI_HEADERS,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
           contents: [{
             role: 'user',
-            parts: [{ text: `請針對以下逐字稿內容，用繁體中文生成結構化 JSON 重點整理。\n提取：標題、摘要(150-250字)、時間軸(MM:SS)、心智大綱(最高3層,id用m1/m1-1/m1-1-1)、關鍵觀點金句、行動清單、5-8個關鍵字。\n--- 內容開始 ---\n${transcript}\n--- 內容結束 ---` }]
+            parts: [{ text: promptText }]
           }],
           generationConfig: {
             responseMimeType: 'application/json',
             responseSchema: SUMMARY_SCHEMA,
             temperature: 0.2,
-            maxOutputTokens: 8192, // ✅ 新增：逐字稿整理輸出最大上限
+            maxOutputTokens: 8192,
           }
         })
       });
@@ -376,7 +504,21 @@ async function handleGemini(body: any): Promise<any> {
  
     // 媒體檔案 / 錄音
     if (type === 'media' || type === 'file' || type === 'recording') {
-      const r = await fetchWithRetry(GEMINI_URL(apiKey), {
+      const promptText = `你數位頂級的語音、影片智能分析大師。
+現在，使用者上傳了一個影音文件 (檔名：${fileName || "未命名影音"})。
+請你仔細讀取並分析這份影音中的語音、字幕、影音畫面等多模態資料，進行頂級的繁體中文重點整理。
+如果該影音非中文（如英文、日文、韓文等），請你先聽懂/理解內容，然後直接用「繁體中文 (Traditional Chinese，台灣習慣用語)」做完美的重點歸納，嚴禁簡體字。
+要求：
+- 為了最大化產出完整與高含金量的分析，請利用模型最大承載與輸出能力，為各欄位生成極其詳盡、深度的分析，絕對不可敷衍簡略。
+- 自動生成最適切的「標題」。
+- 整理出一個 500-800 字以上、結構清晰且分段的「概要摘要」(summary)，必須非常詳盡。
+- 分析語音或影片畫面中各章節或說話亮點出現的實際「時間軸」，給出時間標記與詳細敘述（至少 8-15 個時間點，格式如 MM:SS 或 HH:MM:SS，每個時間點 2-4 句繁體中文詳細記錄，不要簡化）。
+- 生成樹狀心智大綱 (mindmap), 一級主題必須在 5-8 個之間，且每個一級主題下必須至少有 2-4 個二級重點，每個二級重點下至少有 2-4 個三級關鍵細節。所有節點的 label 必須使用具體描述性的詞句 (約 10-25 字，例如「採用 React 進行高效組件開發」而非單純的「技術」或「組件」)，以 id (m1, m1-1, m1-1-1) 完美劃分 3 層階層。
+- 提煉至少 4-6 個「關鍵啟發與金句」 (insights)，且內容描述應充實詳細。
+- 建立至少 4-6 個具實操價值的「行動指標」 (actionItems)。
+- 生成代表性的關鍵字 (keywords)。`;
+ 
+      const r = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-2.5-pro'), {
         method: 'POST', headers: GEMINI_HEADERS,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
@@ -384,14 +526,14 @@ async function handleGemini(body: any): Promise<any> {
             role: 'user',
             parts: [
               { inlineData: { data: fileBase64, mimeType } },
-              { text: `請仔細分析這份影音（檔名：${fileName || '未命名'}）的語音與視覺內容，即便非中文也請用繁體中文整理。\n生成：標題、摘要(150-250字)、時間軸(MM:SS)、心智大綱(最高3層,id用m1/m1-1/m1-1-1)、關鍵金句、行動指標、關鍵字。` }
+              { text: promptText }
             ]
           }],
           generationConfig: {
             responseMimeType: 'application/json',
             responseSchema: SUMMARY_SCHEMA,
             temperature: 0.2,
-            maxOutputTokens: 8192, // ✅ 新增：媒體檔案整理輸出最大上限
+            maxOutputTokens: 8192,
           }
         })
       });
@@ -446,7 +588,7 @@ JSON 格式：{"title":"","summary":"","timeline":[{"time":"MM:SS","title":"","d
   // ── chat ──
   if (action === 'chat') {
     const messages: any[] = [
-      { role: 'system', content: '你是影片摘要工具的 AI 助理，用繁體中文回答關於影片內容的問題。' },
+      { role: 'system', content: '你是影片摘要工具的 AI 助理，用繁體中文回答關於影片內容的問題，一律使用台灣習慣用語，嚴禁簡體字。' },
       { role: 'user', content: `影音背景：${transcript || '無提供'}` }
     ];
     if (Array.isArray(chatHistory)) {
@@ -487,8 +629,7 @@ JSON 格式：{"title":"","summary":"","timeline":[{"time":"MM:SS","title":"","d
         ? `此為 YouTube 影片，Video ID: ${ytId}`
         : `此為一般網頁連結`;
  
-      userMsg = `
-你是一位頂級的影音網址與線上媒體智慧推導大師。
+      userMsg = `你是一位頂級的影音網址與線上媒體智慧推導大師。
 使用者提供了以下連結：【${transcript}】
 ${sourceNote}
  
@@ -497,7 +638,7 @@ ${sourceNote}
 - 作者/來源：【${meta.author || "未知"}】
 - 描述：【${meta.description || "無可用描述"}】
  
-請你根據上述資訊，運用你的知識庫，對此影音或網頁內容進行深度智慧推演，並完全以繁體中文生成對應的結構化資訊。
+請你根據上述資訊，運用你的知識庫，對此影音或網頁內容進行深度智慧推演，並完全以繁體中文 (台灣習慣用語，嚴禁簡體字) 生成對應的結構化資訊。
 摘要開頭請加「（注意：由連結元資料推演生成）」
  
 --- 提供連結資訊 ---
@@ -505,10 +646,9 @@ ${sourceNote}
 標題：${meta.title || "未知"}
 來源作者：${meta.author || "未知"}
 頁面描述：${meta.description || "無"}
---- 連結資訊結束 ---
-`;
+--- 連結資訊結束 ---`;
     } else {
-      userMsg = `請針對以下內容用繁體中文生成結構化 JSON：\n\n${transcript}`;
+      userMsg = `請針對以下內容用繁體中文 (台灣習慣用語，嚴禁簡體字) 生成結構化 JSON：\n\n${transcript}`;
     }
  
     const raw = await callNvidia([

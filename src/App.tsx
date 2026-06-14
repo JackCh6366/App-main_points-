@@ -30,7 +30,7 @@ import {
 
 // 動態流暢 Loading 提示文案
 const LOADING_TIPS_GEMINI = [
-  "正在啟動 Gemini 2.5 Flash Lite 智能多模態分析引擎...",
+  "正在啟動 Gemini 2.5 Pro 智能多模態分析引擎...",
   "正在安全解構影音媒體資訊，辨識音訊特質...",
   "正在由 AI 深入理解與聆聽影音，進行極致逐字轉錄與提煉...",
   "AI 正在針對內容主旨、宗旨脈絡進行頂層概要摘要 (summary) 歸納...",
@@ -567,7 +567,7 @@ export default function App() {
           )}
 
           <div className="text-gray-500 text-xs font-mono hidden sm:inline-block">
-            {provider === "gemini" ? "Gemini 2.5 Flash Lite" : "NVIDIA Llama-3.3 Nemotron Super 49B"}
+            {provider === "gemini" ? "Gemini 2.5 Pro / Flash" : "NVIDIA Llama-3.3 Nemotron Super 49B"}
           </div>
         </div>
       </header>
@@ -729,7 +729,7 @@ export default function App() {
                     }`}
                   >
                     <span>Google Gemini</span>
-                    <span className="text-[9px] opacity-75 font-mono">(gemini-2.5-flash-lite)</span>
+                    <span className="text-[9px] opacity-75 font-mono">(gemini-2.5-pro)</span>
                   </button>
                   <button
                     onClick={() => {

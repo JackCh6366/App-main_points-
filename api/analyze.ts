@@ -21,49 +21,49 @@ const summaryResponseSchema = {
   properties: {
     title: {
       type: Type.STRING,
-      description: "基於本影音或內容，自動生成的主題或最切合的標題 (必填)",
+      description: "基於本影音或內容，自動生成的主題或最切合的標題。必須是繁體中文 (台灣習慣之繁體中文) (必填)",
     },
     summary: {
       type: Type.STRING,
-      description: "150-250字的流暢繁體中文概要，要能提綱挈領說明本內容的宗旨與意圖 (必填)",
+      description: "500-800字以上極其詳盡、結構清晰且分段的繁體中文深度概要。要能透徹分析內容宗旨、背景脈絡、核心論點與結論，請使用豐富描述性長句，絕對不可簡略或只給出一小段。必須是繁體中文 (台灣習慣之繁體中文) (必填)",
     },
     timeline: {
       type: Type.ARRAY,
-      description: "本內容或影音循序漸進的時間軸摘要，如果有明確秒數，請務必精準標記(例如 00:15)，若無可概略估算(例如 00:00, 01:30等) (必填)",
+      description: "本內容或影音循序漸進的完整詳細時間軸摘要。請詳細覆蓋整個影音的所有核心段落（至少 8-15 個時間點，若內容極短則依實際長度）。如果有明確秒數，請務必精準標記(例如 00:15)，若無可概略估算(例如 00:00, 01:30等) (必填)",
       items: {
         type: Type.OBJECT,
         properties: {
           time: { type: Type.STRING, description: "時間標記, 格式必須如 MM:SS 或 HH:MM:SS" },
-          title: { type: Type.STRING, description: "此項目的精炼大綱主題" },
-          description: { type: Type.STRING, description: "該段落主要談論細節、要點概要" },
+          title: { type: Type.STRING, description: "此項目的精炼大綱主題。必須是繁體中文 (台灣習慣之繁體中文)" },
+          description: { type: Type.STRING, description: "該段落主要談論細節、要點概要。必須是繁體中文 (台灣習慣之繁體中文)，且敘述應儘可能詳實完整，以 2-4 句詳細記錄該時段的關鍵對話、細節與重要論點，不要簡化" },
         },
         required: ["time", "title", "description"],
       },
     },
     mindmap: {
       type: Type.ARRAY,
-      description: "基於本內容的階層式樹狀重點大綱，最多支持3層巢狀結構，用於生成心智圖等級的心得 (必填)",
+      description: "基於本內容的階層式樹狀重點大綱，最多支持3層巢狀結構。一級核心主題必須在 5-8 個之間。請確保所有節點的 label 都使用具體、描述性的詞句 (約 10-25 字，包含行動或實質內容，例如「採用 React 進行高效組件開發」而非單純的「技術」或「組件」)，以確保心智圖資訊量豐富，絕對不可敷衍簡略。必須是繁體中文 (台灣習慣之繁體中文) (必填)",
       items: {
         type: Type.OBJECT,
         properties: {
           id: { type: Type.STRING, description: "唯一識別碼 e.g. 'm1'" },
-          label: { type: Type.STRING, description: "一級核心主題名稱" },
+          label: { type: Type.STRING, description: "一級核心主題名稱 (10-25字)。必須是繁體中文 (台灣習慣之繁體中文)" },
           children: {
             type: Type.ARRAY,
-            description: "二級核心重點",
+            description: "二級核心重點。每個一級主題下應包含至少 2-4 個二級節點",
             items: {
               type: Type.OBJECT,
               properties: {
                 id: { type: Type.STRING, description: "唯一識別碼 e.g. 'm1-1'" },
-                label: { type: Type.STRING, description: "二級核心重點名稱" },
+                label: { type: Type.STRING, description: "二級核心重點名稱 (10-25字)。必須是繁體中文 (台灣習慣之繁體中文)" },
                 children: {
                   type: Type.ARRAY,
-                  description: "三級關鍵細節",
+                  description: "三級關鍵細節。每個二級重點下應包含至少 2-4 個三級節點，詳細記錄具體細節",
                   items: {
                     type: Type.OBJECT,
                     properties: {
                       id: { type: Type.STRING, description: "唯一識別碼 e.g. 'm1-1-1'" },
-                      label: { type: Type.STRING, description: "三級關鍵細節描述" },
+                      label: { type: Type.STRING, description: "三級關鍵細節描述 (15-30字)，請儘可能完整詳細描述具體細節，不要簡略。必須是繁體中文 (台灣習慣之繁體中文)" },
                     },
                     required: ["id", "label"],
                   },
@@ -78,31 +78,31 @@ const summaryResponseSchema = {
     },
     insights: {
       type: Type.ARRAY,
-      description: "影音或內容中的關鍵觀點與金句 quote (必填)",
+      description: "影音或內容中的關鍵觀點與金句 quote，請提煉 4-6 個極具啟發與激勵性的項目，以利深度閱讀。必須是繁體中文 (台灣習慣之繁體中文) (必填)",
       items: {
         type: Type.OBJECT,
         properties: {
-          point: { type: Type.STRING, description: "核心論點或啟發" },
-          quote: { type: Type.STRING, description: "對應的精闢金句或原話重現/總結" },
+          point: { type: Type.STRING, description: "核心論點或啟發，請使用詳細的繁體中文 (台灣習慣之繁體中文) 說明" },
+          quote: { type: Type.STRING, description: "對應的精闢金句或原話重現/總結，必須是繁體中文 (台灣習慣之繁體中文)" },
         },
         required: ["point", "quote"],
       },
     },
     actionItems: {
       type: Type.ARRAY,
-      description: "本影音提出的下一步行動、可實踐的目標指引 e.g. 會議行動、學習任務等 (必填)",
+      description: "本影音提出的下一步行動、可實踐的目標指引 e.g. 會議行動、學習任務等，請列出 4-6 個具體項目。必須是繁體中文 (台灣習慣之繁體中文) (必填)",
       items: {
         type: Type.OBJECT,
         properties: {
-          task: { type: Type.STRING, description: "具體的行動任務" },
-          reason: { type: Type.STRING, description: "做此任務的原因、關鍵價值與建議落實方式" },
+          task: { type: Type.STRING, description: "具體的行動任務，必須是繁體中文 (台灣習慣之繁體中文)" },
+          reason: { type: Type.STRING, description: "做此任務的原因、關鍵價值與建議落實方式，敘述應詳盡充實，必須是繁體中文 (台灣習慣之繁體中文)" },
         },
         required: ["task", "reason"],
       },
     },
     keywords: {
       type: Type.ARRAY,
-      description: "本內容的主題關鍵字列表，5-8個 (必填)",
+      description: "本內容的主題關鍵字列表，5-8個，必須是繁體中文 (台灣習慣之繁體中文) (必填)",
       items: {
         type: Type.STRING,
       },
@@ -124,8 +124,8 @@ async function generateContentWithResilience(
   delay = 1500,
   useFallbackModel = true
 ): Promise<any> {
-  const primaryModel = options.model || "gemini-2.5-flash-lite";
-  const fallbackModel = "gemini-1.5-flash";
+  const primaryModel = options.model || "gemini-2.5-pro";
+  const fallbackModel = "gemini-2.5-flash";
  
   try {
     return await ai.models.generateContent({
@@ -407,17 +407,18 @@ export default async function handler(req: any, res: any) {
             return res.status(400).json({ error: "逐字稿內容不能為空" });
           }
           promptText = `
-你是一位頂級的影音重點整理與學習大師。
+你是一位頂級的影音智慧重點整理與學習大師。
 請針對以下影音的「逐字稿、字幕、或文字逐字記錄」內容，進行抽絲剝繭的深度思考與整理。
 要求：
-- 必須全部以「繁體中文 (Traditional Chinese)」提供回應各欄位。
-- 提取最吸睛且代表性的「標題」。
-- 整理出一個具有宏觀視野的「概要摘要」(summary)。
-- 建立條理清晰的「時間軸摘要」，在其中各事件必須附上時間點，如果文字中沒有提及精密時間，可合理估算例如 '00:00' 開始。
-- 建立最高 3 層的「階層式大綱 (mindmap)」，以利前台渲染樹狀圖。其 id 生成請用 m1, m1-1, m1-2... 等。
-- 提煉出讓人能得到啟發與激勵的「關鍵觀點與金句 (insights)」。
-- 列出具有落地可行性的「行動清單 (actionItems)」，幫助讀者在吸收後能進行實踐。
-- 提取 5-8 個「主題關鍵字 (keywords)」。
+- 必須全部以「繁體中文 (Traditional Chinese，台灣習慣用語)」提供回應各個欄位，嚴禁簡體字。
+- 為了最大化產出完整與高含金量的分析，請利用模型最大承載與輸出能力，為各欄位生成極其詳盡、深度的分析，絕對不可敷衍簡略。
+- 提取切實精巧的「標題」 (title)。
+- 整理出一個 500-800 字以上、結構清晰且分段的「概要摘要」(summary)，必須透徹分析內容主旨、背景與核心意圖，富含細節，避免高維度的籠統總結。
+- 建立一組循序漸進的完整詳細「時間軸摘要」 (timeline)，請詳細覆蓋整個內容（至少 8-15 個時間點，若內容極短則依實際長度），格式必須如 'MM:SS' 或 'HH:MM:SS'，並詳細描述（每個時間點 2-4 句繁體中文詳細記錄該時段的關鍵細節與論點，不要簡化）。
+- 建立最高 3 層的樹狀階層式大綱「心智圖 (mindmap)」，一級主題必須在 5-8 個之間，且每個一級主題下必須至少有 2-4 個二級重點，每個二級重點下至少有 2-4 個三級關鍵細節。所有節點的 label 必須使用具體描述性的詞句 (約 10-25 字，例如「採用 React 進行高效組件開發」而非單純的「技術」或「組件」)，以確保心智圖資訊量豐富，以利前台渲染樹狀圖。其 id 請使用 m1, m1-1, m1-2... 等。
+- 提煉至少 4-6 個富有實踐啟發、能激勵人心的「關鍵觀點與金句」 (insights)，且觀點 point 描述與 quote 金句內容應充實詳細。
+- 建立至少 4-6 個具實施價值、能落地實踐的「行動清單」 (actionItems)，提供詳細的實作步驟任務 task 與執行原因 reason。
+- 提取最富主題代表性的 5-8 個「關鍵字」 (keywords)。
  
 --- 內容開始 ---
 ${transcript}
@@ -456,7 +457,7 @@ ${transcript}
 1. 必須查到該影片/網頁的正確中英文標題、講者 (與創作者)、發佈頻道、以及核心宗旨。
 2. 盡可能在公開網路搜集該影片的章節、時間標記大綱、分段要點、公開文字稿、或網路上對此影片的所有重點解讀與摘要。
 3. 如果是在 YouTube，請結合你的搜尋，重組出該影片一條一條的詳細時間軸章節（格式如 MM:SS）與各節內容。
-請你使用「繁體中文 (Traditional Chinese)」將上述查找到的具體事實，編製成一篇非常完整、客觀、且高含金量的背景資料白皮書報告。
+請你使用「繁體中文 (Traditional Chinese，台灣習慣用語)」將上述查找到的具體事實，編製成一篇非常完整、客觀、且高含金量的背景資料白皮書報告。
 `;
             } else {
               searchPrompt = `
@@ -467,15 +468,15 @@ ${transcript}
 1. 必須查到該影片/網頁的正確中英文標題、講者 (與創作者)、發佈頻道、以及核心宗旨。
 2. 盡可能在公開網路搜集該影片的章節、時間標記大綱、分段要點、公開文字稿、或網路上對此影片的所有重點解讀與摘要。
 3. 如果是在 YouTube，請結合你的搜尋，重組出該影片一條一條的詳細時間軸章節（格式如 MM:SS）與各節內容。
-請你使用「繁體中文 (Traditional Chinese)」將上述查找到的具體事實，編製成一篇非常完整、客觀、且高含金量的背景資料白皮書報告。
+請你使用「繁體中文 (Traditional Chinese，台灣習慣用語)」將上述查找到的具體事實，編製成一篇非常完整、客觀、且高含金量的背景資料白皮書報告。
 `;
             }
  
             const searchResponse = await generateContentWithResilience({
-              model: "gemini-2.5-flash-lite",
+              model: "gemini-2.5-flash",
               contents: [searchPrompt],
               config: {
-                systemInstruction: "你是一個專業聯網精準檢索與事實彙整機器人。負責深入挖掘各類 YouTube 影片與網頁的文字內容與分段章節，並拒絕任何天馬行空的想像，所有敘述必須基於搜尋到的網頁事實。",
+                systemInstruction: "你是一個專業聯網精準檢索與事實彙整機器人。負責深入挖掘各類 YouTube 影片與網頁的文字內容與分段章節，並拒絕任何天馬行空的想像，所有敘述必須基於搜尋到的網頁事實，且所有回答皆必須使用台灣習慣之繁體中文。",
                 temperature: 0.2,
                 tools: [{ googleSearch: {} }]
               }
@@ -498,14 +499,15 @@ ${groundedBackground}
  
 請你根據上面真實、確定無誤的背景資料，進行一次堪稱完美且高水準的繁體中文重點智慧彙整。
 要求：
-- 必須全部以「繁體中文 (Traditional Chinese)」提供回應各個欄位。
-- 所有重點大綱、時間軸、心智圖、關鍵金句都必須精確切合上述那部影片或網頁的「真實內容」，絕對不能張冠李戴、或者是產生不相干的幻想！
+- 必須全部以「繁體中文 (Traditional Chinese，台灣習慣用語)」提供回應各個欄位，嚴禁簡體字。
+- 所有重點大綱、時間軸、心智圖、關鍵金句都必須精確切合上述那部影片或網頁的「真實內容」，絕對不能張冠黎戴、或者是產生不相干的幻想！
+- 為了最大化產出完整與高含金量的分析，請利用模型最大承載與輸出能力，為各欄位生成極其詳盡、深度的分析，絕對不可敷衍簡略。
 - 提取切實精巧的「標題」 (title)。
-- 生成一段 150-250 字的宏觀精煉「摘要」 (summary)。
-- 根據背景事實，建立一組循序漸進的精確「時間軸摘要」 (timeline)，格式必須如 'MM:SS' 或 'HH:MM:SS'。
-- 建立最高 3 層的樹狀階層式大綱「心智圖 (mindmap)」，細膩拆解重點與其細部架構，其 id 請使用 m1, m1-1, m1-2... 等。
-- 提煉至少 3 個富有實踐啟發、能激勵人心的「關鍵觀點與金句」 (insights)。
-- 建立具實施價值、能落地實踐的「行動清單」 (actionItems)。
+- 整理出一個 500-800 字以上、結構清晰且分段的「概要摘要」(summary)，必須透徹分析內容主旨、背景與核心意圖，富含細節，避免高維度的籠統總結。
+- 根據背景事實，建立一組循序漸進的完整詳細「時間軸摘要」 (timeline)，請詳細覆蓋整個內容（至少 8-15 個時間點，若內容極短則依實際長度），格式必須如 'MM:SS' 或 'HH:MM:SS'，並詳細描述（每個時間點 2-4 句繁體中文詳細記錄該時段的關鍵細節與論點，不要簡化）。
+- 建立最高 3 層的樹狀階層式大綱「心智圖 (mindmap)」，一級主題必須在 5-8 個之間，且每個一級主題下必須至少有 2-4 個二級重點，每個二級重點下至少有 2-4 個三級關鍵細節。所有節點的 label 必須使用具體描述性的詞句 (約 10-25 字，例如「採用 React 進行高效組件開發」而非單純的「技術」或「組件」)，以確保心智圖資訊量豐富，以利前台渲染樹狀圖。其 id 請使用 m1, m1-1, m1-2... 等。
+- 提煉至少 4-6 個富有實踐啟發、能激勵人心的「關鍵觀點與金句」 (insights)，且觀點 point 描述與 quote 金句內容應充實詳細。
+- 建立至少 4-6 個具實施價值、能落地實踐的「行動清單」 (actionItems)，提供詳細的實作步驟任務 task 與執行原因 reason。
 - 提取最富主題代表性的 5-8 個「關鍵字」 (keywords)。
 `;
           } else {
@@ -519,13 +521,14 @@ ${groundedBackground}
  
 請你根據以上元資料，搭配你的知識庫，針對此影片或網頁進行深度智慧推演與整理。
 要求：
-- 必須全部以「繁體中文 (Traditional Chinese)」提供回應各個欄位。
-- 在「summary」摘要首句，必須加上說明：「（注意：本摘要由連結元資料搭配知識庫推演生成，建議改用 Google Gemini 模式以獲得聯網即時搜尋的精準結果。）」
+- 必須全部以「繁體中文 (Traditional Chinese，台灣習慣用語)」提供回應各個欄位，嚴禁簡體字。
+- 為了最大化產出完整與高含金量的分析，請利用模型最大承載與輸出能力，為各欄位生成極其詳盡、深度的分析，絕對不可敷衍簡略。
+- 在「summary」摘要首句，必須加上說明：「（注意：本摘要由連結元資料搭配知識庫推演生成，建議改用 Google Gemini 模式以獲得聯網即時搜尋的精準結果。）」且總字數需達 500-800 字以上，結構清晰且分段，敘述詳盡。
 - 提取切實精巧的「標題」(title)，若已有標題請直接沿用並精煉。
-- 合理估算並生成一組循序漸進的「時間軸摘要」(timeline)，格式如 MM:SS 或 HH:MM:SS。
-- 建立最高 3 層的樹狀階層式大綱「心智圖」(mindmap)，其 id 請使用 m1, m1-1... 等。
-- 提煉富有啟發的「關鍵觀點與金句」(insights)。
-- 建立具落地可行性的「行動清單」(actionItems)。
+- 合理估算並生成一組循序漸進的完整詳細「時間軸摘要」(timeline)，請包含 8-15 個時間點，格式如 MM:SS 或 HH:MM:SS，且每個時間點需以 2-4 句繁體中文詳細記錄該時段的關鍵細節，不要簡化。
+- 建立最高 3 層的樹狀階層式大綱「心智圖」(mindmap)，一級主題必須在 5-8 個之間，且每個一級主題下必須至少有 2-4 個二級重點，每個二級重點下至少有 2-4 個三級關鍵細節。所有節點的 label 必須使用具體描述性的詞句 (約 10-25 字，例如「採用 React 進行高效組件開發」而非單純的「技術」或「組件」)，以確保心智圖資訊量豐富，其 id 請使用 m1, m1-1... 等。
+- 提煉至少 4-6 個富有啟發的「關鍵觀點與金句」(insights)，且內容描述應充實詳細。
+- 建立至少 4-6 個具落地可行性的「行動清單」(actionItems)。
 - 提取最富主題代表性的 5-8 個「關鍵字」(keywords)。
 `;
           }
@@ -543,17 +546,16 @@ ${groundedBackground}
           };
  
           promptText = `
-你是一位頂級的語音、影片智能分析大師。
-現在，使用者上傳了一個影音文件 (檔名：${fileName || "未命名影音"})。
-請你仔細讀取並分析這份影音中的語音和視覺內容，進行頂級的繁體中文重點整理。
-如果該影音非中文（如英文、日文、韓文等），請你先聽懂/理解內容，然後直接用「繁體中文 (Traditional Chinese)」做完美的重點歸納。
+幕、影音畫面等多模態資料，進行頂級的繁體中文重點整理。
+如果該影音非中文（如英文、日文、韓文等），請你先聽懂/理解內容，然後直接用「繁體中文 (Traditional Chinese，台灣習慣用語)」做完美的重點歸納，嚴禁簡體字。
 要求：
+- 為了最大化產出完整與高含金量的分析，請利用模型最大承載與輸出能力，為各欄位生成極其詳盡、深度的分析，絕對不可敷衍簡略。
 - 自動生成最適切的「標題」。
-- 用 150-250 字說明「摘要」。
-- 分析語音或影片畫面中各章節或說話亮點出現的實際「時間軸」，給出時間標記與論述。
-- 生成樹狀心智大綱 (mindmap), 以 id (m1, m1-1, m1-1-1) 完美劃分 3 層階層。
-- 提煉「關鍵啟發與金句」 (insights)。
-- 建立具實操價值的「行動指標」 (actionItems)。
+- 整理出一個 500-800 字以上、結構清晰且分段的「概要摘要」(summary)，必須非常詳盡。
+- 分析語音或影片畫面中各章節或說話亮點出現的實際「時間軸」，給出時間標記與詳細敘述（至少 8-15 個時間點，格式如 MM:SS 或 HH:MM:SS，每個時間點 2-4 句繁體中文詳細記錄，不要簡化）。
+- 生成樹狀心智大綱 (mindmap), 一級主題必須在 5-8 個之間，且每個一級主題下必須至少有 2-4 個二級重點，每個二級重點下至少有 2-4 個三級關鍵細節。所有節點的 label 必須使用具體描述性的詞句 (約 10-25 字，例如「採用 React 進行高效組件開發」而非單純的「技術」或「組件」)，以 id (m1, m1-1, m1-1-1) 完美劃分 3 層階層。
+- 提煉至少 4-6 個「關鍵啟發與金句」 (insights)，且內容描述應充實詳細。
+- 建立至少 4-6 個具實操價值的「行動指標」 (actionItems)。
 - 生成代表性的關鍵字 (keywords)。
 `;
           contents = [mediaPart, promptText];
@@ -562,14 +564,14 @@ ${groundedBackground}
         }
  
         const geminiResponse = await generateContentWithResilience({
-          model: "gemini-2.5-flash-lite",
+          model: "gemini-2.5-pro",
           contents: contents,
           config: {
-            systemInstruction: "你是一個專業多國語文音訊與影片分析整理機器人。本質上，你擅長聆聽各類影音的多媒體封包與文字，並轉換成最精緻結構化的繁體中文 JSON 分類。",
+            systemInstruction: "你是一個專業多國語文音訊與影片分析整理機器人。你必須以繁體中文 (台灣習慣用語) 進行所有回覆，確保轉換為最精緻且內容極其詳盡結構化的繁體中文 JSON，嚴禁簡體字及中國大陸用語，如「信息」、「菜單」、「鏈接」、「優化」、「視頻」、「音頻」、「屏幕」應轉換為「資訊」、「選單」、「連結」、「最佳化」、「影片」、「音訊」、「螢幕」等。",
             responseMimeType: "application/json",
             responseSchema: summaryResponseSchema,
             temperature: 0.2,
-            maxOutputTokens: 8192, // ✅ 新增：Gemini 2.5 Flash Lite 最大輸出上限
+            maxOutputTokens: 8192, // ✅ 新增：Gemini 最大輸出上限
           },
         }, 3, 2000, true);
  
@@ -610,14 +612,14 @@ ${JSON.stringify(summaryData, null, 2)}
 `;
  
         const geminiResponse = await generateContentWithResilience({
-          model: "gemini-2.5-flash-lite",
+          model: "gemini-2.5-flash",
           contents: [promptText],
           config: {
-            systemInstruction: `你是一個專業翻譯程序，負責將特定的結構化 JSON 按原格式精準翻譯成指定語言：${targetLangDesc}。不要修改 JSON 中的 Key。`,
+            systemInstruction: `你是一個專業翻譯程序，負責將特定的結構化 JSON 按原格式精準翻譯成指定語言：${targetLangDesc}。你必須以該語言最適切、流暢的形式進行翻譯。若目標語言為繁體中文，必須使用台灣習慣用語，嚴禁簡體字。不要修改 JSON 中的 Key。`,
             responseMimeType: "application/json",
             responseSchema: summaryResponseSchema,
             temperature: 0.1,
-            maxOutputTokens: 8192, // ✅ 新增：Gemini 2.5 Flash Lite 最大輸出上限
+            maxOutputTokens: 8192, // ✅ 新增：Gemini 最大輸出上限
           },
         }, 3, 1500, true);
  
@@ -668,10 +670,10 @@ ${transcript || "無提供特定內容，請以常識跟助理邏輯回答。"}
         });
  
         const geminiResponse = await generateContentWithResilience({
-          model: "gemini-2.5-flash-lite",
+          model: "gemini-2.5-flash",
           contents: formattedContents,
           config: {
-            systemInstruction: "你是一個附屬於影片摘要工具的 AI 專屬互動解答助理，專長是以繁體中文就一部影片的細節進行極深度解答、觀點拓展與實踐方法擴充。",
+            systemInstruction: "你是一個附屬於影片摘要工具 of AI 專屬互動解答助理，專長是以繁體中文 (台灣習慣用語) 就一部影片的細節進行極深度解答、觀點拓展與實踐方法擴充，嚴禁使用簡體字與大陸用語。",
             temperature: 0.7,
             maxOutputTokens: 8192, // ✅ 新增：Chat 回應同樣套用最大輸出上限
           },
@@ -700,7 +702,7 @@ ${transcript || "無提供特定內容，請以常識跟助理邏輯回答。"}
             return res.status(400).json({ error: "逐字稿內容不能為空" });
           }
           promptText = `
-請針對以下內容進行抽絲剝繭的思考與整理，並完全以繁體中文生成對應的結構化資訊：
+請針對以下內容進行抽絲剝繭的思考與整理，並完全以繁體中文 (台灣習慣用語) 生成對應的結構化資訊，嚴禁簡體字。
  
 --- 內容開始 ---
 ${transcript}
@@ -735,9 +737,9 @@ ${sourceNote}
 - 作者/來源：【${meta.author || "未知"}】
 - 描述：【${meta.description || "無可用描述"}】
  
-請你根據上述資訊，運用你的知識庫，對此影音或網頁內容進行深度智慧推演，並完全以繁體中文生成對應的結構化資訊。
+請你根據上述資訊，運用你的知識庫，對此影音或網頁內容進行深度智慧推演，並完全以繁體中文 (台灣習慣用語，嚴禁簡體字) 生成對應的結構化資訊。
 要求：
-- 提取切實精巧的「標題」(title)，若已有標題請直接沿用並精煉。
+- 提取切實精巧的「標題」(title), 若已有標題請直接沿用並精煉。
 - 生成一段 150-250 字宏觀精煉的「摘要」(summary)，開頭須加上：「（注意：此內容由連結元資料搭配知識庫推演生成，建議以 Gemini 搜尋模式獲得更精準結果。）」
 - 根據已知資訊建立一組循序漸進的「時間軸摘要」(timeline)，格式必須如 'MM:SS' 或 'HH:MM:SS'。
 - 建立最高 3 層的樹狀階層式大綱「心智圖」(mindmap)，其 id 請使用 m1, m1-1... 等。
@@ -779,7 +781,7 @@ ${sourceNote}
         else if (targetLanguage === "zh-tw") targetLangDesc = "繁體中文 (Traditional Chinese)";
  
         const promptText = `
-請將以下輸入的 JSON 內容完全翻譯成：【${targetLangDesc}】。
+請將以下輸入的 JSON 內容完全翻譯成：【${targetLangDesc}】。若目標語言為繁體中文，必須使用台灣習慣用語，嚴禁簡體字。
 請注意：
 - 務必在翻譯後保持與原來完全一致的 JSON 架構。
 - 翻譯時要講求信、雅、達。
@@ -812,7 +814,7 @@ ${JSON.stringify(summaryData, null, 2)}
         const messages: any[] = [
           { 
             role: "system", 
-            content: "你是一個附屬於影片摘要工具的 AI 專屬互動解答助理，專長是以繁體中文就一部影片的細節進行極深度解答、觀點拓展與實踐方法擴充。" 
+            content: "你是一個附屬於影片摘要工具的 AI 專屬互動解答助理，專長是以繁體中文 (台灣習慣用語) 就一部影片的細節進行極深度解答、觀點拓展與實踐方法擴充，嚴禁使用簡體字與大陸用語。" 
           },
           {
             role: "user",
@@ -822,7 +824,7 @@ ${transcript || "無提供特定內容，請以常識跟助理邏輯回答。"}
 --- 影音內容背景結束 ---
  
 請基於這部影音所談論的事實、亮點與觀點，有深度、熱情、客觀地回答使用者的提問。若影音中沒有直接談及，也可以結合你的知識庫，但要特別說明「影片中並非主要提及，但補充如下...」。
-一律使用「繁體中文」回答。`
+一律使用「繁體中文 (台灣習慣用語)」回答，嚴禁簡體字與大陸用語。`
           }
         ];
  
