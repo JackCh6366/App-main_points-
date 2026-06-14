@@ -1,10 +1,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 import path from "path";
-
+ 
 // 載入環境變數
 dotenv.config();
-
+ 
 // 初始化 Gemini AI SDK
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -14,7 +14,7 @@ const ai = new GoogleGenAI({
     },
   },
 });
-
+ 
 // 定義完整的 JSON 結構 schema (同原本 server.ts)
 const summaryResponseSchema = {
   type: Type.OBJECT,
@@ -110,14 +110,14 @@ const summaryResponseSchema = {
   },
   required: ["title", "summary", "timeline", "mindmap", "insights", "actionItems", "keywords"],
 };
-
+ 
 // 智慧退避重試
 interface ResilienceOptions {
   model?: string;
   contents: any[];
   config?: any;
 }
-
+ 
 async function generateContentWithResilience(
   options: ResilienceOptions,
   retries = 3,
@@ -126,7 +126,7 @@ async function generateContentWithResilience(
 ): Promise<any> {
   const primaryModel = options.model || "gemini-2.5-flash-lite";
   const fallbackModel = "gemini-1.5-flash";
-
+ 
   try {
     return await ai.models.generateContent({
       model: primaryModel,
@@ -147,7 +147,7 @@ async function generateContentWithResilience(
       errMsg.includes("exhausted") ||
       errMsg.includes("overloaded") ||
       errMsg.includes("temporary");
-
+ 
     if (isRetriable) {
       if (retries > 0) {
         const waitTime = delay + Math.random() * 800;
@@ -165,7 +165,7 @@ async function generateContentWithResilience(
     throw error;
   }
 }
-
+ 
 // 錯誤訊息格式化
 function formatGeminiError(error: any, defaultMsg: string): string {
   const errMsg = String(error.message || error.stack || (typeof error === "string" ? error : ""));
@@ -180,7 +180,7 @@ function formatGeminiError(error: any, defaultMsg: string): string {
   ) {
     return "⚠️ 系統分析額度/頻率已達限制 (Resource Exhausted - 429)\n\n目前您的 API 免費額度或每分鐘發送的請求頻率已暫時到達上限。\n\n💡 建議排解與使用管道：\n1. 請您稍等 30 至 60 秒後，再次點擊送出即可成功恢復正常分析。\n2. 如果您在 AI Studio 主控台中頻繁使用，可至 Google AI Studio 面板檢查 API 金鑰的使用狀態，或綁定信用卡開啟 Pay-as-you-go 方案以完全解除頻率配額限制。";
   }
-
+ 
   if (
     errMsg.includes("503") || 
     errMsg.includes("UNAVAILABLE") || 
@@ -199,7 +199,7 @@ function formatGeminiError(error: any, defaultMsg: string): string {
   ) {
     return "⚠️ API 金鑰設定無效或尚未配置\n\n系統未能驗證您的 API 金鑰。請確認您的 .env 環境設定中是否已指派對應金鑰，或是前往專案設定面板重新填寫正確的金鑰。";
   }
-
+ 
   if (
     errMsg.includes("blocked") || 
     errMsg.includes("safety") || 
@@ -208,29 +208,29 @@ function formatGeminiError(error: any, defaultMsg: string): string {
   ) {
     return "⚠️ 內容觸發安全過濾攔截\n\n由於目前貼上的影音內容或原文字稿符合敏感字詞安全性過濾規範，故被官方安全機制予以過濾。請嘗試上傳或貼上其他主題的素材重試。";
   }
-
+ 
   return errMsg || defaultMsg;
 }
-
+ 
 // 輔助：從 YouTube 網址萃取 11 碼 Video ID
 function getYouTubeId(url: string): string | null {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
   const match = url.match(regExp);
   return (match && match[2].length === 11) ? match[2] : null;
 }
-
+ 
 interface LinkMetadata {
   title: string;
   author?: string;
   description?: string;
   source?: string;
 }
-
+ 
 // 輔助：後端預先獲取網址的 Title 與 Metadata
 async function getUrlMetadata(url: string): Promise<LinkMetadata> {
   const result: LinkMetadata = { title: "", source: "web" };
   const ytId = getYouTubeId(url);
-
+ 
   if (ytId) {
     result.source = "youtube";
     try {
@@ -252,10 +252,10 @@ async function getUrlMetadata(url: string): Promise<LinkMetadata> {
     }
     return result;
   }
-
+ 
   try {
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 6000); // 6秒超時
+    const id = setTimeout(() => controller.abort(), 6000);
     
     const response = await fetch(url, {
       signal: controller.signal,
@@ -267,7 +267,7 @@ async function getUrlMetadata(url: string): Promise<LinkMetadata> {
     });
     
     clearTimeout(id);
-
+ 
     if (response.ok) {
       const html = await response.text();
       const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
@@ -285,15 +285,14 @@ async function getUrlMetadata(url: string): Promise<LinkMetadata> {
   } catch (error) {
     console.warn("[Metadata Scraper] 獲取網頁失敗:", error);
   }
-
+ 
   return result;
 }
-
-// 輔助：嘗試從 NVIDIA 回應中解析 JSON 的強健解析器，支援從 Markdown 標記或包含額外文字的回應中提取 JSON 對象
+ 
+// 輔助：嘗試從 NVIDIA 回應中解析 JSON 的強健解析器
 function parseJSONResponse(text: string): any {
   let cleaned = text.trim();
   
-  // 尋找第一個 '{' 與最後一個 '}'
   const startIdx = cleaned.indexOf('{');
   const endIdx = cleaned.lastIndexOf('}');
   
@@ -304,8 +303,8 @@ function parseJSONResponse(text: string): any {
   const jsonStr = cleaned.slice(startIdx, endIdx + 1);
   return JSON.parse(jsonStr);
 }
-
-// NVIDIA 系統提示詞，用來規範結構化 JSON 輸出
+ 
+// NVIDIA 系統提示詞
 const NVIDIA_SYSTEM_INSTRUCTION = `你是一個專業多國語文音訊與影片分析整理機器人。本質上，你擅長聆聽各類影音的多媒體封包與文字，並轉換成最精緻結構化的繁體中文 JSON 分類。
 請確保輸出符合以下 JSON 格式，不要包含額外的說明文字或 Markdown 包裝，直接回傳 JSON 內容：
 {
@@ -337,25 +336,25 @@ const NVIDIA_SYSTEM_INSTRUCTION = `你是一個專業多國語文音訊與影片
   ],
   "keywords": ["主題關鍵字列表", "5-8個"]
 }`;
-
-// NVIDIA API 呼叫輔助函式
+ 
+// NVIDIA API 呼叫輔助函式 — max_tokens 調整為 32768
 async function callNvidiaAPI(messages: any[], jsonMode = false): Promise<string> {
   const apiKey = process.env.NVIDIA_API_KEY;
   if (!apiKey) {
     throw new Error("NVIDIA API Key not found in environment variables");
   }
-
+ 
   const payload: any = {
     model: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
     messages: messages,
     temperature: 0.2,
-    max_tokens: 4096,
+    max_tokens: 32768, // ✅ 從 4096 調整至 32768（NVIDIA Nemotron 49B 安全輸出上限）
   };
-
+ 
   if (jsonMode) {
     payload.response_format = { type: "json_object" };
   }
-
+ 
   const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -364,36 +363,35 @@ async function callNvidiaAPI(messages: any[], jsonMode = false): Promise<string>
     },
     body: JSON.stringify(payload),
   });
-
+ 
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`NVIDIA API call failed: Status ${response.status} - ${errorText}`);
   }
-
+ 
   const data = await response.json() as any;
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
     throw new Error("NVIDIA API returned empty response content");
   }
-
+ 
   return content;
 }
-
+ 
 // 主 Vercel Serverless Function 處理器
 export default async function handler(req: any, res: any) {
-  // 僅支援 POST 請求
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
-
+ 
   try {
     const { provider, action } = req.body;
-
+ 
     if (!provider || !action) {
       return res.status(400).json({ error: "Missing provider or action in request body" });
     }
-
+ 
     if (provider === "gemini") {
       // ==========================================
       // GOOGLE GEMINI FLOW
@@ -403,7 +401,7 @@ export default async function handler(req: any, res: any) {
         const { type, transcript, fileName, fileBase64, mimeType } = req.body;
         let promptText = "";
         let contents: any[] = [];
-
+ 
         if (type === "transcript" || type === "text") {
           if (!transcript || transcript.trim() === "") {
             return res.status(400).json({ error: "逐字稿內容不能為空" });
@@ -420,7 +418,7 @@ export default async function handler(req: any, res: any) {
 - 提煉出讓人能得到啟發與激勵的「關鍵觀點與金句 (insights)」。
 - 列出具有落地可行性的「行動清單 (actionItems)」，幫助讀者在吸收後能進行實踐。
 - 提取 5-8 個「主題關鍵字 (keywords)」。
-
+ 
 --- 內容開始 ---
 ${transcript}
 --- 內容結束 ---
@@ -430,18 +428,18 @@ ${transcript}
           if (!transcript || transcript.trim() === "") {
             return res.status(400).json({ error: "網址連結不能為空" });
           }
-
+ 
           console.log(`[Link Summarize] 開始兩階段分析。第一階段：聯網查找網域內容與文字稿... 網址: ${transcript}`);
           let groundedBackground = "";
           let meta: LinkMetadata = { title: "" };
-
+ 
           try {
             meta = await getUrlMetadata(transcript);
             console.log(`[Link Summarize] 成功預先抓取 metadata: 標題="${meta.title}", 作者="${meta.author || ''}"`);
           } catch (err) {
             console.warn("[Link Summarize] 預抓 metadata 失敗，將降級為直接聯網...", err);
           }
-
+ 
           try {
             let searchPrompt = "";
             if (meta.title) {
@@ -452,7 +450,7 @@ ${transcript}
 - 標題：【${meta.title}】
 - 作者/來源：【${meta.author || "未知"}】
 - 原始連結：【${transcript}】
-
+ 
 請你使用內建的 Google 搜尋工具，認真查詢該影片/網頁【${meta.title}】的實際詳細背景。
 要求：
 1. 必須查到該影片/網頁的正確中英文標題、講者 (與創作者)、發佈頻道、以及核心宗旨。
@@ -472,7 +470,7 @@ ${transcript}
 請你使用「繁體中文 (Traditional Chinese)」將上述查找到的具體事實，編製成一篇非常完整、客觀、且高含金量的背景資料白皮書報告。
 `;
             }
-
+ 
             const searchResponse = await generateContentWithResilience({
               model: "gemini-2.5-flash-lite",
               contents: [searchPrompt],
@@ -482,14 +480,14 @@ ${transcript}
                 tools: [{ googleSearch: {} }]
               }
             }, 2, 2000, true);
-
+ 
             groundedBackground = searchResponse.text || "";
             console.log(`[Link Summarize] 第一階段聯網成功。背景字長: ${groundedBackground.length}`);
           } catch (searchError: any) {
             console.warn("[Link Summarize] 第一階段聯網失敗，降級智慧推理...", searchError);
             groundedBackground = "";
           }
-
+ 
           if (groundedBackground && groundedBackground.trim() !== "") {
             promptText = `
 你是一位頂級的影音智慧重點整理與學習大師。
@@ -497,7 +495,7 @@ ${transcript}
 --- 聯網背景事實資料開始 ---
 ${groundedBackground}
 --- 聯網背景事實資料結束 ---
-
+ 
 請你根據上面真實、確定無誤的背景資料，進行一次堪稱完美且高水準的繁體中文重點智慧彙整。
 要求：
 - 必須全部以「繁體中文 (Traditional Chinese)」提供回應各個欄位。
@@ -518,7 +516,7 @@ ${groundedBackground}
 - 作者/來源：【${meta.author || "未知"}】
 - 描述：【${meta.description || "無"}】
 - 原始網址：【${transcript}】
-
+ 
 請你根據以上元資料，搭配你的知識庫，針對此影片或網頁進行深度智慧推演與整理。
 要求：
 - 必須全部以「繁體中文 (Traditional Chinese)」提供回應各個欄位。
@@ -536,14 +534,14 @@ ${groundedBackground}
           if (!fileBase64 || !mimeType) {
             return res.status(400).json({ error: "缺少媒體檔案資料或 MimeType" });
           }
-
+ 
           const mediaPart = {
             inlineData: {
               data: fileBase64,
               mimeType: mimeType,
             },
           };
-
+ 
           promptText = `
 你是一位頂級的語音、影片智能分析大師。
 現在，使用者上傳了一個影音文件 (檔名：${fileName || "未命名影音"})。
@@ -562,7 +560,7 @@ ${groundedBackground}
         } else {
           return res.status(400).json({ error: "不支援的處理類型" });
         }
-
+ 
         const geminiResponse = await generateContentWithResilience({
           model: "gemini-2.5-flash-lite",
           contents: contents,
@@ -571,29 +569,30 @@ ${groundedBackground}
             responseMimeType: "application/json",
             responseSchema: summaryResponseSchema,
             temperature: 0.2,
+            maxOutputTokens: 8192, // ✅ 新增：Gemini 2.5 Flash Lite 最大輸出上限
           },
         }, 3, 2000, true);
-
+ 
         const textResult = geminiResponse.text;
         if (!textResult) {
           throw new Error("Gemini AI 未能產出有效的回應");
         }
-
+ 
         const parsedJson = JSON.parse(textResult.trim());
         return res.json(parsedJson);
-
+ 
       } else if (action === "translate") {
         const { summaryData, targetLanguage } = req.body;
         if (!summaryData || !targetLanguage) {
           return res.status(400).json({ error: "缺少要翻譯的資料或目標語言" });
         }
-
+ 
         let targetLangDesc = "繁體中文 (Traditional Chinese)";
         if (targetLanguage === "en") targetLangDesc = "英文 (English)";
         else if (targetLanguage === "ja") targetLangDesc = "日文 (Japanese)";
         else if (targetLanguage === "ko") targetLangDesc = "韓文 (Korean)";
         else if (targetLanguage === "zh-tw") targetLangDesc = "繁體中文 (Traditional Chinese)";
-
+ 
         const promptText = `
 你是一位頂級的多國語言翻譯家與重點剖析師。
 請將以下輸入的 JSON 重點整理資料中的「所有文字內容」完美翻譯成：【${targetLangDesc}】。
@@ -605,11 +604,11 @@ ${groundedBackground}
 - Insights 的 point 與 quote 都要翻譯。
 - ActionItems 的 task 與 reason 都要翻譯。
 - Keywords 的字詞列表都要翻譯。
-
+ 
 輸入的 JSON 內容如下：
 ${JSON.stringify(summaryData, null, 2)}
 `;
-
+ 
         const geminiResponse = await generateContentWithResilience({
           model: "gemini-2.5-flash-lite",
           contents: [promptText],
@@ -618,23 +617,24 @@ ${JSON.stringify(summaryData, null, 2)}
             responseMimeType: "application/json",
             responseSchema: summaryResponseSchema,
             temperature: 0.1,
+            maxOutputTokens: 8192, // ✅ 新增：Gemini 2.5 Flash Lite 最大輸出上限
           },
         }, 3, 1500, true);
-
+ 
         const textResult = geminiResponse.text;
         if (!textResult) {
           throw new Error("Gemini AI 翻譯回應失敗");
         }
-
+ 
         const parsedJson = JSON.parse(textResult.trim());
         return res.json(parsedJson);
-
+ 
       } else if (action === "chat") {
         const { transcript, chatHistory, userMessage } = req.body;
         if (!userMessage || userMessage.trim() === "") {
           return res.status(400).json({ error: "訊息內容不能為空" });
         }
-
+ 
         const formattedContents: any[] = [];
         formattedContents.push({
           role: "user",
@@ -645,14 +645,14 @@ ${JSON.stringify(summaryData, null, 2)}
 --- 影音內容背景 ---
 ${transcript || "無提供特定內容，請以常識跟助理邏輯回答。"}
 --- 影音內容背景結束 ---
-
+ 
 請基於這部影音所談論的事實、亮點與觀點，有深度、熱情、客觀地回答使用者的提問。若影音中沒有直接談及，也可以結合你的知識庫，但要特別說明「影片中並非主要提及，但補充如下...」。
 一律使用「繁體中文」回答。
 `,
             },
           ],
         });
-
+ 
         if (chatHistory && Array.isArray(chatHistory)) {
           chatHistory.forEach((msg: any) => {
             formattedContents.push({
@@ -661,25 +661,26 @@ ${transcript || "無提供特定內容，請以常識跟助理邏輯回答。"}
             });
           });
         }
-
+ 
         formattedContents.push({
           role: "user",
           parts: [{ text: userMessage }],
         });
-
+ 
         const geminiResponse = await generateContentWithResilience({
           model: "gemini-2.5-flash-lite",
           contents: formattedContents,
           config: {
             systemInstruction: "你是一個附屬於影片摘要工具的 AI 專屬互動解答助理，專長是以繁體中文就一部影片的細節進行極深度解答、觀點拓展與實踐方法擴充。",
             temperature: 0.7,
+            maxOutputTokens: 8192, // ✅ 新增：Chat 回應同樣套用最大輸出上限
           },
         }, 3, 1500, true);
-
+ 
         const answer = geminiResponse.text || "助理目前似乎無法回答，請稍候再試。";
         return res.json({ answer });
       }
-
+ 
     } else if (provider === "nvidia") {
       // ==========================================
       // NVIDIA NIM FLOW
@@ -687,32 +688,30 @@ ${transcript || "無提供特定內容，請以常識跟助理邏輯回答。"}
       
       if (action === "summarize") {
         const { type, transcript, fileName, fileBase64, mimeType } = req.body;
-
-        // 僅拒絕需要 multimodal 的媒體檔案（NVIDIA 為純文字 LLM）
+ 
         if (type === "media" || type === "recording") {
           return res.status(400).json({ error: "NVIDIA 引擎為純文字模型，不支援直接上傳音訊/影片檔案。請改用【貼上字稿】或【影音連結】模式。" });
         }
-
+ 
         let promptText = "";
-
+ 
         if (type === "transcript" || type === "text") {
           if (!transcript || transcript.trim() === "") {
             return res.status(400).json({ error: "逐字稿內容不能為空" });
           }
           promptText = `
 請針對以下內容進行抽絲剝繭的思考與整理，並完全以繁體中文生成對應的結構化資訊：
-
+ 
 --- 內容開始 ---
 ${transcript}
 --- 內容結束 ---
 `;
-
+ 
         } else if (type === "link") {
           if (!transcript || transcript.trim() === "") {
             return res.status(400).json({ error: "網址連結不能為空" });
           }
-
-          // 預先抓取連結 metadata，再組裝成文字 prompt 讓 NVIDIA 分析
+ 
           let meta: LinkMetadata = { title: "", source: "web" };
           try {
             meta = await getUrlMetadata(transcript);
@@ -720,22 +719,22 @@ ${transcript}
           } catch (err) {
             console.warn("[NVIDIA Link] 預抓 metadata 失敗，將使用原始 URL 推演...", err);
           }
-
+ 
           const ytId = getYouTubeId(transcript);
           const sourceNote = ytId
             ? `此為 YouTube 影片，Video ID: ${ytId}`
             : `此為一般網頁連結`;
-
+ 
           promptText = `
 你是一位頂級的影音網址與線上媒體智慧推導大師。
 使用者提供了以下連結：【${transcript}】
 ${sourceNote}
-
+ 
 系統預先抓取到的網頁資訊如下：
 - 標題：【${meta.title || "未知標題"}】
 - 作者/來源：【${meta.author || "未知"}】
 - 描述：【${meta.description || "無可用描述"}】
-
+ 
 請你根據上述資訊，運用你的知識庫，對此影音或網頁內容進行深度智慧推演，並完全以繁體中文生成對應的結構化資訊。
 要求：
 - 提取切實精巧的「標題」(title)，若已有標題請直接沿用並精煉。
@@ -745,7 +744,7 @@ ${sourceNote}
 - 提煉富有啟發的「關鍵觀點與金句」(insights)。
 - 建立具落地可行性的「行動清單」(actionItems)。
 - 提取最富主題代表性的 5-8 個「關鍵字」(keywords)。
-
+ 
 --- 提供連結資訊 ---
 原始網址：${transcript}
 標題：${meta.title || "未知"}
@@ -756,29 +755,29 @@ ${sourceNote}
         } else {
           return res.status(400).json({ error: "不支援的處理類型" });
         }
-
+ 
         const messages = [
           { role: "system", content: NVIDIA_SYSTEM_INSTRUCTION },
           { role: "user", content: promptText }
         ];
-
+ 
         console.log(`[NVIDIA API] 發送 ${type} 彙整請求...`);
         const resultText = await callNvidiaAPI(messages, true);
         const parsedJson = parseJSONResponse(resultText);
         return res.json(parsedJson);
-
+ 
       } else if (action === "translate") {
         const { summaryData, targetLanguage } = req.body;
         if (!summaryData || !targetLanguage) {
           return res.status(400).json({ error: "缺少要翻譯的資料或目標語言" });
         }
-
+ 
         let targetLangDesc = "繁體中文 (Traditional Chinese)";
         if (targetLanguage === "en") targetLangDesc = "英文 (English)";
         else if (targetLanguage === "ja") targetLangDesc = "日文 (Japanese)";
         else if (targetLanguage === "ko") targetLangDesc = "韓文 (Korean)";
         else if (targetLanguage === "zh-tw") targetLangDesc = "繁體中文 (Traditional Chinese)";
-
+ 
         const promptText = `
 請將以下輸入的 JSON 內容完全翻譯成：【${targetLangDesc}】。
 請注意：
@@ -789,27 +788,27 @@ ${sourceNote}
 - Insights 的 point 與 quote 都要翻譯。
 - ActionItems 的 task 與 reason 都要翻譯。
 - Keywords 的字詞列表都要翻譯。
-
+ 
 輸入的 JSON 內容如下：
 ${JSON.stringify(summaryData, null, 2)}
 `;
-
+ 
         const messages = [
           { role: "system", content: NVIDIA_SYSTEM_INSTRUCTION },
           { role: "user", content: promptText }
         ];
-
+ 
         console.log("[NVIDIA API] 發送翻譯請求...");
         const resultText = await callNvidiaAPI(messages, true);
         const parsedJson = parseJSONResponse(resultText);
         return res.json(parsedJson);
-
+ 
       } else if (action === "chat") {
         const { transcript, chatHistory, userMessage } = req.body;
         if (!userMessage || userMessage.trim() === "") {
           return res.status(400).json({ error: "訊息內容不能為空" });
         }
-
+ 
         const messages: any[] = [
           { 
             role: "system", 
@@ -821,12 +820,12 @@ ${JSON.stringify(summaryData, null, 2)}
 --- 影音內容背景 ---
 ${transcript || "無提供特定內容，請以常識跟助理邏輯回答。"}
 --- 影音內容背景結束 ---
-
+ 
 請基於這部影音所談論的事實、亮點與觀點，有深度、熱情、客觀地回答使用者的提問。若影音中沒有直接談及，也可以結合你的知識庫，但要特別說明「影片中並非主要提及，但補充如下...」。
 一律使用「繁體中文」回答。`
           }
         ];
-
+ 
         if (chatHistory && Array.isArray(chatHistory)) {
           chatHistory.forEach((msg: any) => {
             messages.push({
@@ -835,12 +834,12 @@ ${transcript || "無提供特定內容，請以常識跟助理邏輯回答。"}
             });
           });
         }
-
+ 
         messages.push({
           role: "user",
           content: userMessage
         });
-
+ 
         console.log("[NVIDIA API] 發送即時聊天對答請求...");
         const answer = await callNvidiaAPI(messages, false);
         return res.json({ answer });
@@ -848,7 +847,7 @@ ${transcript || "無提供特定內容，請以常識跟助理邏輯回答。"}
     } else {
       return res.status(400).json({ error: "Unsupported provider" });
     }
-
+ 
   } catch (error: any) {
     console.error("API handler error:", error);
     return res.status(500).json({

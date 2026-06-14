@@ -11,13 +11,11 @@ dotenv.config();
 // ─── 讀取 request body（含 timeout 保護與 already-consumed 偵測）─────────────
 function readBody(req: IncomingMessage): Promise<any> {
   return new Promise((resolve) => {
-    // 若 stream 已結束或不可讀，直接嘗試讀 (req as any).body（某些環境已預先解析）
     if ((req as any).body !== undefined) {
       const b = (req as any).body;
       return resolve(typeof b === 'string' ? tryParse(b) : b);
     }
  
-    // readable 屬性在 stream 耗盡後為 false
     if (req.readableEnded || !req.readable) {
       return resolve({});
     }
@@ -71,26 +69,26 @@ async function fetchWithRetry(
     throw err;
   }
 }
-
+ 
 // 輔助：從 YouTube 網址萃取 11 碼 Video ID
 function getYouTubeId(url: string): string | null {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
   const match = url.match(regExp);
   return (match && match[2].length === 11) ? match[2] : null;
 }
-
+ 
 interface LinkMetadata {
   title: string;
   author?: string;
   description?: string;
   source?: string;
 }
-
+ 
 // 輔助：預先獲取網址的 Title 與 Metadata
 async function getUrlMetadata(url: string): Promise<LinkMetadata> {
   const result: LinkMetadata = { title: "", source: "web" };
   const ytId = getYouTubeId(url);
-
+ 
   if (ytId) {
     result.source = "youtube";
     try {
@@ -112,10 +110,10 @@ async function getUrlMetadata(url: string): Promise<LinkMetadata> {
     }
     return result;
   }
-
+ 
   try {
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 6000); // 6秒超時
+    const id = setTimeout(() => controller.abort(), 6000);
     
     const response = await fetch(url, {
       signal: controller.signal,
@@ -127,7 +125,7 @@ async function getUrlMetadata(url: string): Promise<LinkMetadata> {
     });
     
     clearTimeout(id);
-
+ 
     if (response.ok) {
       const html = await response.text();
       const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
@@ -145,15 +143,14 @@ async function getUrlMetadata(url: string): Promise<LinkMetadata> {
   } catch (error) {
     console.warn("[Metadata Scraper] 獲取網頁失敗:", error);
   }
-
+ 
   return result;
 }
-
-// 輔助：強健的 JSON 解析器，支援從 Markdown 標記或包含額外文字的回應中提取 JSON 對象
+ 
+// 輔助：強健的 JSON 解析器
 function parseJSONResponse(text: string): any {
   let cleaned = text.trim();
   
-  // 尋找第一個 '{' 與最後一個 '}'
   const startIdx = cleaned.indexOf('{');
   const endIdx = cleaned.lastIndexOf('}');
   
@@ -270,7 +267,10 @@ async function handleGemini(body: any): Promise<any> {
       method: 'POST', headers: GEMINI_HEADERS,
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-        contents: formattedContents
+        contents: formattedContents,
+        generationConfig: {
+          maxOutputTokens: 8192, // ✅ 新增：Chat 回應最大輸出上限
+        }
       })
     });
     const d: any = await r.json();
@@ -292,7 +292,12 @@ async function handleGemini(body: any): Promise<any> {
           role: 'user',
           parts: [{ text: `請將以下 JSON 中所有文字翻譯成【${langMap[targetLanguage] || '繁體中文'}】，保持 JSON 結構不變，id / time 不翻譯。\n${JSON.stringify(summaryData, null, 2)}` }]
         }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: SUMMARY_SCHEMA, temperature: 0.1 }
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: SUMMARY_SCHEMA,
+          temperature: 0.1,
+          maxOutputTokens: 8192, // ✅ 新增：翻譯輸出最大上限
+        }
       })
     });
     const d: any = await r.json();
@@ -313,7 +318,10 @@ async function handleGemini(body: any): Promise<any> {
             role: 'user',
             parts: [{ text: `請搜尋此連結的詳細資訊（標題、作者、章節大綱、時間軸等）：【${transcript}】\n請用繁體中文輸出完整的背景資料。` }]
           }],
-          tools: [{ googleSearch: {} }]
+          tools: [{ googleSearch: {} }],
+          generationConfig: {
+            maxOutputTokens: 8192, // ✅ 新增：搜尋階段輸出上限
+          }
         })
       });
       const searchData: any = await searchRes.json();
@@ -328,7 +336,12 @@ async function handleGemini(body: any): Promise<any> {
             role: 'user',
             parts: [{ text: `根據以下背景資料，用繁體中文生成結構化 JSON 重點整理：\n\n${background}\n\n原始連結：${transcript}` }]
           }],
-          generationConfig: { responseMimeType: 'application/json', responseSchema: SUMMARY_SCHEMA, temperature: 0.2 }
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: SUMMARY_SCHEMA,
+            temperature: 0.2,
+            maxOutputTokens: 8192, // ✅ 新增：結構化輸出最大上限
+          }
         })
       });
       const structData: any = await structRes.json();
@@ -347,7 +360,12 @@ async function handleGemini(body: any): Promise<any> {
             role: 'user',
             parts: [{ text: `請針對以下逐字稿內容，用繁體中文生成結構化 JSON 重點整理。\n提取：標題、摘要(150-250字)、時間軸(MM:SS)、心智大綱(最高3層,id用m1/m1-1/m1-1-1)、關鍵觀點金句、行動清單、5-8個關鍵字。\n--- 內容開始 ---\n${transcript}\n--- 內容結束 ---` }]
           }],
-          generationConfig: { responseMimeType: 'application/json', responseSchema: SUMMARY_SCHEMA, temperature: 0.2 }
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: SUMMARY_SCHEMA,
+            temperature: 0.2,
+            maxOutputTokens: 8192, // ✅ 新增：逐字稿整理輸出最大上限
+          }
         })
       });
       const d: any = await r.json();
@@ -369,7 +387,12 @@ async function handleGemini(body: any): Promise<any> {
               { text: `請仔細分析這份影音（檔名：${fileName || '未命名'}）的語音與視覺內容，即便非中文也請用繁體中文整理。\n生成：標題、摘要(150-250字)、時間軸(MM:SS)、心智大綱(最高3層,id用m1/m1-1/m1-1-1)、關鍵金句、行動指標、關鍵字。` }
             ]
           }],
-          generationConfig: { responseMimeType: 'application/json', responseSchema: SUMMARY_SCHEMA, temperature: 0.2 }
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: SUMMARY_SCHEMA,
+            temperature: 0.2,
+            maxOutputTokens: 8192, // ✅ 新增：媒體檔案整理輸出最大上限
+          }
         })
       });
       const d: any = await r.json();
@@ -403,7 +426,7 @@ JSON 格式：{"title":"","summary":"","timeline":[{"time":"MM:SS","title":"","d
       model: 'nvidia/llama-3.3-nemotron-super-49b-v1.5',
       messages,
       temperature: 0.2,
-      max_tokens: 4096
+      max_tokens: 32768 // ✅ 從 4096 調整至 32768（NVIDIA Nemotron 49B 安全輸出上限）
     };
     if (jsonMode) payload.response_format = { type: 'json_object' };
  
@@ -458,25 +481,25 @@ JSON 格式：{"title":"","summary":"","timeline":[{"time":"MM:SS","title":"","d
       } catch (err) {
         console.warn("[NVIDIA Link Local] 預抓 metadata 失敗，將使用原始 URL 推演...", err);
       }
-
+ 
       const ytId = getYouTubeId(transcript);
       const sourceNote = ytId
         ? `此為 YouTube 影片，Video ID: ${ytId}`
         : `此為一般網頁連結`;
-
+ 
       userMsg = `
 你是一位頂級的影音網址與線上媒體智慧推導大師。
 使用者提供了以下連結：【${transcript}】
 ${sourceNote}
-
+ 
 系統預先抓取到的網頁資訊如下：
 - 標題：【${meta.title || "未知標題"}】
 - 作者/來源：【${meta.author || "未知"}】
 - 描述：【${meta.description || "無可用描述"}】
-
+ 
 請你根據上述資訊，運用你的知識庫，對此影音或網頁內容進行深度智慧推演，並完全以繁體中文生成對應的結構化資訊。
 摘要開頭請加「（注意：由連結元資料推演生成）」
-
+ 
 --- 提供連結資訊 ---
 原始網址：${transcript}
 標題：${meta.title || "未知"}
@@ -511,7 +534,6 @@ export default defineConfig(() => {
             const url = req.url || '';
             console.log(`[Vite Middleware] Incoming request: ${req.method} ${url}`);
    
-            // 只攔截 /api 開頭
             if (!url.startsWith('/api')) return next();
    
             console.log(`[API] ${req.method} ${url}`);
