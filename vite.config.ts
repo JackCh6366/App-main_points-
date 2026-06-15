@@ -586,7 +586,7 @@ ${groundedBackground}
             responseMimeType: 'application/json',
             responseSchema: SUMMARY_SCHEMA,
             temperature: 0.2,
-            maxOutputTokens: 8192,
+            maxOutputTokens: 65536,
           }
         })
       });
@@ -627,7 +627,7 @@ ${transcript}
             responseMimeType: 'application/json',
             responseSchema: SUMMARY_SCHEMA,
             temperature: 0.2,
-            maxOutputTokens: 8192,
+            maxOutputTokens: 65536,
           }
         })
       });
@@ -668,7 +668,7 @@ ${transcript}
             responseMimeType: 'application/json',
             responseSchema: SUMMARY_SCHEMA,
             temperature: 0.2,
-            maxOutputTokens: 8192,
+            maxOutputTokens: 65536,
           }
         })
       });
