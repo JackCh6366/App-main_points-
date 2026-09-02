@@ -5,8 +5,8 @@ import { defineConfig } from 'vite';
 import dotenv from 'dotenv';
 import type { IncomingMessage, ServerResponse } from 'http';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
-dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), quiet: true });
+dotenv.config({ quiet: true });
 
 // ─── 讀取 request body（含 timeout 保護與 already-consumed 偵測）─────────────
 function readBody(req: IncomingMessage): Promise<any> {

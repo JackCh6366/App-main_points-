@@ -3,7 +3,8 @@ import dotenv from "dotenv";
 import path from "path";
  
 // 載入環境變數
-dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local"), quiet: true });
+dotenv.config({ quiet: true });
  
 // 初始化 Gemini AI SDK
 const ai = new GoogleGenAI({
