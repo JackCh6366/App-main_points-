@@ -125,7 +125,7 @@ async function generateContentWithResilience(
   delay = 1500,
   useFallbackModel = true
 ): Promise<any> {
-  const primaryModel = options.model || "gemini-2.5-pro";
+  const primaryModel = options.model || "gemini-3.1-pro-preview";
   const fallbackModel = "gemini-2.5-flash";
  
   try {
@@ -700,7 +700,7 @@ ${groundedBackground}
         }
  
         const geminiResponse = await generateContentWithResilience({
-          model: "gemini-2.5-pro",
+          model: "gemini-3.1-pro-preview",
           contents: contents,
           config: {
             systemInstruction: "你是一個專業多國語文音訊與影片分析整理機器人。你必須以繁體中文 (台灣習慣用語) 進行所有回覆，確保轉換為最精緻且內容極其詳盡結構化的繁體中文 JSON，嚴禁簡體字及中國大陸用語，如「信息」、「菜單」、「鏈接」、「優化」、「視頻」、「音頻」、「屏幕」應轉換為「資訊」、「選單」、「連結」、「最佳化」、「影片」、「音訊」、「螢幕」等。",

@@ -729,7 +729,7 @@ export default function App() {
                     }`}
                   >
                     <span>Google Gemini</span>
-                    <span className="text-[9px] opacity-75 font-mono">(gemini-2.5-pro)</span>
+                    <span className="text-[9px] opacity-75 font-mono">(gemini-3.1-pro-preview)</span>
                   </button>
                   <button
                     onClick={() => {

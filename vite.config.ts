@@ -393,7 +393,7 @@ const SUMMARY_SCHEMA = {
   required: ['title', 'summary', 'timeline', 'mindmap', 'insights', 'actionItems', 'keywords']
 };
 
-const GEMINI_URL = (key: string, model = 'gemini-2.5-pro') =>
+const GEMINI_URL = (key: string, model = 'gemini-3.1-pro-preview') =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
 
 const GEMINI_HEADERS = { 'Content-Type': 'application/json', 'User-Agent': 'aistudio-build' };
@@ -574,7 +574,7 @@ ${groundedBackground}
 - 提取最富主題代表性的 5-8 個「關鍵字」(keywords)。`;
       }
 
-      const structRes = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-2.5-pro'), {
+      const structRes = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-3.1-pro-preview'), {
         method: 'POST', headers: GEMINI_HEADERS,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
@@ -615,7 +615,7 @@ ${groundedBackground}
 ${transcript}
 --- 內容結束 ---`;
 
-      const r = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-2.5-pro'), {
+      const r = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-3.1-pro-preview'), {
         method: 'POST', headers: GEMINI_HEADERS,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
@@ -653,7 +653,7 @@ ${transcript}
 - 建立至少 4-6 個具實操價值的「行動指標」 (actionItems)。
 - 生成代表性的關鍵字 (keywords)。`;
 
-      const r = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-2.5-pro'), {
+      const r = await fetchWithRetry(GEMINI_URL(apiKey, 'gemini-3.1-pro-preview'), {
         method: 'POST', headers: GEMINI_HEADERS,
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
